@@ -1,0 +1,24 @@
+--cpu Cortex-M3
+"canprotocol\startup_stm32f103xb.o"
+"canprotocol\main.o"
+"canprotocol\stm32f1xx_it.o"
+"canprotocol\stm32f1xx_hal_msp.o"
+"canprotocol\stm32f1xx_hal_gpio_ex.o"
+"canprotocol\stm32f1xx_hal_can.o"
+"canprotocol\stm32f1xx_hal.o"
+"canprotocol\stm32f1xx_hal_rcc.o"
+"canprotocol\stm32f1xx_hal_rcc_ex.o"
+"canprotocol\stm32f1xx_hal_gpio.o"
+"canprotocol\stm32f1xx_hal_dma.o"
+"canprotocol\stm32f1xx_hal_cortex.o"
+"canprotocol\stm32f1xx_hal_pwr.o"
+"canprotocol\stm32f1xx_hal_flash.o"
+"canprotocol\stm32f1xx_hal_flash_ex.o"
+"canprotocol\stm32f1xx_hal_exti.o"
+"canprotocol\stm32f1xx_hal_tim.o"
+"canprotocol\stm32f1xx_hal_tim_ex.o"
+"canprotocol\system_stm32f1xx.o"
+--strict --scatter "CANprotocol\CANprotocol.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "CANprotocol.map" -o CANprotocol\CANprotocol.axf
