@@ -42,13 +42,16 @@
 CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN PV */
-
+uint8_t TxData[8];
+uint8_t RxData[8];
+uint32_t TxMailbox;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
+void HAL_CAN_RxCpltCallback (void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -121,7 +124,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -133,10 +136,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -158,15 +161,15 @@ static void MX_CAN_Init(void)
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN1;
-  hcan.Init.Prescaler = 16;
+  hcan.Init.Prescaler = 2;
   hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_6TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_8TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
@@ -174,7 +177,44 @@ static void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
+CAN_FilterTypeDef sFilterConfig;
 
+sFilterConfig.FilterBank = 0; // S? b? l?c c?n c?u hình (0 d?n 13)
+sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK; // Ch? d? l?c theo ID và mask
+sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT; // Kích thu?c b? l?c là 32 bit
+sFilterConfig.FilterIdHigh = 0x0000; // Giá tr? ID cao c?a b? l?c
+sFilterConfig.FilterIdLow = 0x0000; // Giá tr? ID th?p c?a b? l?c
+sFilterConfig.FilterMaskIdHigh = 0x0000; // Giá tr? mask cao c?a b? l?c
+sFilterConfig.FilterMaskIdLow = 0x0000; // Giá tr? mask th?p c?a b? l?c
+sFilterConfig.FilterFIFOAssignment = 0; // Ch? d?nh FIFO nh?n du?c s? d?ng cho b? l?c
+sFilterConfig.FilterActivation = ENABLE; // Kích ho?t b? l?c
+
+if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
+{
+}
+CAN_TxHeaderTypeDef TxHeader;
+TxHeader.StdId = 0x123; // ID c?a tin nh?n c?n g?i
+TxHeader.RTR = CAN_RTR_DATA; // Lo?i tin nh?n (DATA ho?c REMOTE)
+TxHeader.IDE = CAN_ID_STD; // Ki?u ID (STANDARD ho?c EXTENDED)
+TxHeader.DLC = 8; // Ð? dài c?a d? li?u (t?i da 8 byte)
+TxData[0] = 0x11;
+TxData[1] = 0x22;
+TxData[2] = 0x33;
+TxData[3] = 0x44;
+TxData[4] = 0x55;
+TxData[5] = 0x66;
+TxData[6] = 0x77;
+TxData[7] = 0x88;
+
+if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) != HAL_OK)
+{
+}
+
+CAN_RxHeaderTypeDef RxHeader;
+if (HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+{
+  // X? lý l?i n?u có
+}
   /* USER CODE END CAN_Init 2 */
 
 }
