@@ -26,7 +26,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define MASTER_ID   0x281
+#define SLAVE_ID1   0x012
+#define SLAVE_ID2   0x274
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -42,16 +44,21 @@
 CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN PV */
+CAN_TxHeaderTypeDef TxHeader;
+CAN_RxHeaderTypeDef RxHeader;
+uint32_t TxMailbox;
 uint8_t TxData[8];
 uint8_t RxData[8];
-uint32_t TxMailbox;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
-void HAL_CAN_RxCpltCallback (void);
+void WriteCAN(uint16_t ID, uint8_t *data);
+void ReadCAN(uint16_t ID, uint8_t *data);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -167,7 +174,7 @@ static void MX_CAN_Init(void)
   hcan.Init.TimeSeg1 = CAN_BS1_6TQ;
   hcan.Init.TimeSeg2 = CAN_BS2_8TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
-  hcan.Init.AutoBusOff = DISABLE;
+  hcan.Init.AutoBusOff = ENABLE;
   hcan.Init.AutoWakeUp = DISABLE;
   hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
@@ -192,7 +199,7 @@ sFilterConfig.FilterActivation = ENABLE; // Kích ho?t b? l?c
 if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
 {
 }
-CAN_TxHeaderTypeDef TxHeader;
+
 TxHeader.StdId = 0x123; // ID c?a tin nh?n c?n g?i
 TxHeader.RTR = CAN_RTR_DATA; // Lo?i tin nh?n (DATA ho?c REMOTE)
 TxHeader.IDE = CAN_ID_STD; // Ki?u ID (STANDARD ho?c EXTENDED)
@@ -209,8 +216,6 @@ TxData[7] = 0x88;
 if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) != HAL_OK)
 {
 }
-
-CAN_RxHeaderTypeDef RxHeader;
 if (HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
 {
   // X? lý l?i n?u có
@@ -234,7 +239,33 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef* hcan)
+{
+	if(RxHeader.StdId == 0x456) //id tuy nguoi su dung da cau hinh truoc do
+	{
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+	}
+}
+void WriteCan(uint16_t ID, uint8_t *data)
+{
+	uint8_t dataOut[8];
+	TxHeader.StdId = ID; // ID c?a tin nh?n c?n g?i
+	TxHeader.RTR = CAN_RTR_DATA; // Lo?i tin nh?n (DATA ho?c REMOTE)
+	TxHeader.IDE = CAN_ID_STD; // Ki?u ID (STANDARD ho?c EXTENDED)
+	TxHeader.DLC = 8; // Ð? dài c?a d? li?u (t?i da 8 byte)
+	dataOut[0] = data[0];
+	dataOut[1] = data[1];
+	dataOut[2] = data[2];
+	dataOut[3] = data[3];
+	dataOut[4] = data[4];
+	dataOut[5] = data[5];
+	dataOut[6] = data[6];
+	dataOut[7] = data[7];
+	if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, dataOut, &TxMailbox) ==HAL_OK)
+	{
+		
+	}
+}
 /* USER CODE END 4 */
 
 /**
