@@ -199,23 +199,6 @@ sFilterConfig.FilterActivation = ENABLE; // Kích ho?t b? l?c
 if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
 {
 }
-
-TxHeader.StdId = 0x123; // ID c?a tin nh?n c?n g?i
-TxHeader.RTR = CAN_RTR_DATA; // Lo?i tin nh?n (DATA ho?c REMOTE)
-TxHeader.IDE = CAN_ID_STD; // Ki?u ID (STANDARD ho?c EXTENDED)
-TxHeader.DLC = 8; // Ð? dài c?a d? li?u (t?i da 8 byte)
-TxData[0] = 0x11;
-TxData[1] = 0x22;
-TxData[2] = 0x33;
-TxData[3] = 0x44;
-TxData[4] = 0x55;
-TxData[5] = 0x66;
-TxData[6] = 0x77;
-TxData[7] = 0x88;
-
-if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) != HAL_OK)
-{
-}
 if (HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
 {
   // X? lý l?i n?u có
