@@ -109,17 +109,13 @@ int main(void)
 
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 
-  TxHeader.DLC = 1;
+  TxHeader.DLC = 8;
   TxHeader.ExtId = 0;
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
-  TxHeader.StdId = 0x103;
+  TxHeader.StdId = MASTER_ID;
   TxHeader.TransmitGlobalTime = DISABLE;
 
-  TxData[0] = 0x01;
-  TxData[1] = 0x02;
-  TxData[2] = 0x03;
-  TxData[3] = 0x04;
 	
   /* USER CODE END 2 */
 
@@ -130,19 +126,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-
-//		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-//		  sprintf ((char *)TxData, "F103=%2d", indx++);
-
-//		  HAL_Delay (750);
-//		if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) != HAL_OK)
-//		  {
-//			  Error_Handler ();
-//		  }
-
-
-//	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+		TxData[0]= HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+		TxData[1]= HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+		WriteCAN(TxData);
   }
 	
   /* USER CODE END 3 */
@@ -222,11 +208,11 @@ static void MX_CAN_Init(void)
   CAN_FilterTypeDef canfilterconfig;
 
   canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
-  canfilterconfig.FilterBank = 10;
+  canfilterconfig.FilterBank = 0;
   canfilterconfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-  canfilterconfig.FilterIdHigh = 0x100<<5;
+  canfilterconfig.FilterIdHigh = 0x0000;
   canfilterconfig.FilterIdLow = 0x0000;
-  canfilterconfig.FilterMaskIdHigh = 0x100<<5;
+  canfilterconfig.FilterMaskIdHigh = 0x0000;
   canfilterconfig.FilterMaskIdLow = 0x0000;
   canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
   canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
@@ -254,9 +240,6 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -264,18 +247,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : PA0 PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
 
-void WriteCan(uint8_t *data)
+void WriteCAN(uint8_t *data)
 {
 	uint8_t dataOut[8];
 	
@@ -287,20 +269,33 @@ void WriteCan(uint8_t *data)
 	dataOut[5] = data[5];
 	dataOut[6] = data[6];
 	dataOut[7] = data[7];
-	if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) != HAL_OK)
-		  {
-			  Error_Handler ();
-		  }
-	else isTransmit=1;
+	HAL_CAN_AddTxMessage(&hcan, &TxHeader, dataOut, &TxMailbox);
+	
 }
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==0x103)HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
+		if(RxHeader.StdId==SLAVE_ID1)
+		{
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		}
 	}
 	
 }
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+//{
+//	if(GPIO_Pin== GPIO_PIN_0)
+//	{
+//		TxData[0]=0x01;
+//		WriteCan(TxData);
+//	}
+//	if(GPIO_Pin== GPIO_PIN_1)
+//	{
+//		TxData[1]=0x01;
+//		WriteCan(TxData);
+//	}
+//}
 /* USER CODE END 4 */
 
 /**
