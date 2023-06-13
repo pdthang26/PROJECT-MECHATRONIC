@@ -42,16 +42,39 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
-volatile short encoderValue = 0;
-volatile short last_encoderValue = 0;
-const int sampleTime = 10; // in milliseconds
+
+
+uint32_t encoderValue = 0;
+uint16_t encoderGet = 0;
+uint32_t last_encoderValue = 0;
+const float sampleTime = 0.01; // in seconds
 const float pulsesPerRevolution = 156; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
+int count=-1;
+
+// Variable PID
+float Kp = 1.0;
+float Ki = 0.1;
+float Kd = 0.1;
+float integral = 0.0;
+float derivative = 0.0;
+float last_error = 0.0;
+float output = 0.0;
+
+// Khai bao bien cho PWM
+uint16_t pwm_value = 0;
+float setpoint = 0;
+
+
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,8 +82,11 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void dc_motor_control(float setpoint, float input);
+float pid_controller(float setpoint, float input, float dt);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -98,11 +124,11 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);
-	HAL_TIM_Base_Start_IT(&htim3);
-	__HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
-	
+	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
+	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -252,6 +278,65 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 0;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 65535;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+  HAL_TIM_MspPostInit(&htim4);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -264,6 +349,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
@@ -282,20 +368,51 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM3) 
 		{
-			encoderValue = __HAL_TIM_GET_COUNTER(&htim2);// get value from encoder of timer 2
 			direction = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? -1 : 1;// checking the direction of the car
+			encoderGet = __HAL_TIM_GET_COUNTER(&htim2);// get value from encoder of timer 2
+			if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) // check if timer 2 overflowed
+			{
+				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE); // clear overflow flag
+				if (direction == 1) count++; // increment count if car is moving forward
+				else count--; // decrement count if car is moving backward
+			}
+			encoderValue = encoderGet + (count*65535);
 			float revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
-			rpm = revolutions / (sampleTime / 1000.0) * 60*direction;// calculating the value of velocity in RPM
-			mps = (rpm*diameter*PI)/60.0;// calculating the value of velocity in m/s
-			posInRad = encoderValue * direction * 0.017453293f ; //calculating the value of position in rad
-			posInMeter = encoderValue/pulsesPerRevolution*diameter*PI;
+			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
+			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
+			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
+			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			last_encoderValue = encoderValue;
     }
-		else if (htim->Instance == TIM2) 
-		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    }
 }
+
+// tính toán PID
+float pid_controller(float setpoint, float input, float dt)
+{
+    float error = setpoint - input;
+    integral += error * dt;
+    derivative = (error - last_error) / dt;
+    output = Kp * error + Ki * integral + Kd * derivative;
+    last_error = error;
+    return output;
+}
+
+// dieu khien dong co dua tren pid
+void dc_motor_control(float setpoint, float input)
+{
+    output = pid_controller(setpoint, input, sampleTime);
+    // gioi han gia tri pwm trong khoang 0 den 1
+    if (output > 1.0)
+        output = 1.0;
+    else if (output < 0.0)
+        output = 0.0;
+    // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+    pwm_value = (uint16_t)(output * 65535);
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+}
+
+
+
 /* USER CODE END 4 */
 
 /**
