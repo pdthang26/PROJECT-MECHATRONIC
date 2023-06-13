@@ -47,9 +47,9 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 
 
-uint32_t encoderValue = 0;
+int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
-uint32_t last_encoderValue = 0;
+int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
 const float pulsesPerRevolution = 156; // pulse per revolution
 float rpm = 0; // velocity in RPM
@@ -59,8 +59,8 @@ float posInRad =0, posInMeter = 0;
 int count=-1;
 
 // Variable PID
-float Kp = 1.0;
-float Ki = 0.1;
+float Kp = 10.0;
+float Ki = 0.5;
 float Kd = 0.1;
 float integral = 0.0;
 float derivative = 0.0;
@@ -129,6 +129,7 @@ int main(void)
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
+	setpoint =100;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -139,7 +140,7 @@ while (1)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+		
   }
   /* USER CODE END 3 */
 }
@@ -383,6 +384,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			last_encoderValue = encoderValue;
+			dc_motor_control(setpoint, rpm);
     }
 }
 
