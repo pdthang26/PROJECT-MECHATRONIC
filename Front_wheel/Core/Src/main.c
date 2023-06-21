@@ -32,6 +32,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define diameter            0.4 //(m)
+#define PI                    3.14159
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,14 +53,39 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-CLCD_I2C_Name LCD1;
+//CLCD_I2C_Name LCD1;
+float adcValue;
 
-uint8_t sendData;
-char sendVel[16];
-char sendStick[16];
-char lcdStringBtn[16];
-char lcdStringVel[16];
-uint8_t lastValue = 0;
+
+// Encoder varible
+int32_t encoderValue = 0;
+uint16_t encoderGet = 0;
+int32_t last_encoderValue = 0;
+const float sampleTime = 0.01; // in seconds
+const float pulsesPerRevolution = 22; // pulse per revolution
+float rpm = 0; // velocity in RPM
+float mps = 0; // velocity in m/s
+int direction; // FORWARD is 1 and REVERSE is -1
+float posInRad =0, posInMeter = 0;
+int count=-1;
+
+// Variable PID
+float Kp = 10.0;
+float Ki = 0.5;
+float Kd = 0.1;
+float integral = 0.0;
+float derivative = 0.0;
+float last_error = 0.0;
+float output = 0.0;
+
+// Khai bao bien cho PWM
+uint16_t pwm_value = 0;
+uint16_t pwmValueCW = 0;
+uint16_t pwmValueCCW = 0;
+float setpoint = 0;
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,12 +93,14 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_TIM1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void dc_motor_control(float setpoint, float input);
+float pid_controller(float setpoint, float input, float dt);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -109,16 +138,25 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_USART1_UART_Init();
-  MX_TIM1_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-	
+	// start analog to digital convert
 	HAL_ADC_Start(&hadc1);
-	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);
-	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
+  //Start timer
+	HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
+	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // khoi dong PWM tai channel 1
+	// Enable motor
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,1);// active for run Clockwise direction
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
+	setpoint =100;
+	
+//	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -128,40 +166,42 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		uint16_t valueAdc = HAL_ADC_GetValue(&hadc1);
-		sendData = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<3|HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)<<2|
-								HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2)<<1|HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
-		float vel = ((float)valueAdc/4026.0)*100;
-		sprintf(lcdStringBtn,"F:%d R:%d||L:%d R:%d",sendData&1,sendData>>1&1,sendData>>2&1,sendData>>3&1 );
-		sprintf(sendVel,"v%.2f\n",vel);
-		sprintf(sendStick,"s%d\n",sendData);
-		if (sendData != lastValue)
+		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
 		{
-			HAL_UART_Transmit(&huart1, (unsigned char*) sendVel, sizeof(sendVel), HAL_MAX_DELAY);
-			HAL_UART_Transmit(&huart1, (unsigned char*) sendStick, sizeof(sendStick), HAL_MAX_DELAY);
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			HAL_Delay(20);
+			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
+			{
+				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
+				{
+					adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+					pwmValueCW = (uint16_t)(65535 * adcValue);
+					pwmValueCCW = 0;
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+				}
+				pwmValueCW = 0;
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+			}
 		}
-	
-		if (vel <10)
+		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
 		{
-			sprintf(lcdStringVel,"Velocity: %.2f%%", vel);
-			CLCD_I2C_SetCursor(&LCD1, 15, 0);
-			CLCD_I2C_WriteString(&LCD1," ");
+			HAL_Delay(20);
+			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
+			{
+				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
+				{
+					adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+					pwmValueCW = 0;
+					pwmValueCCW = (uint16_t)(65535 * adcValue);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+				}
+				pwmValueCCW = 0;
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+			}
 		}
-		else if (vel >=100)
-		{
-			sprintf(lcdStringVel,"Velocity:   100%%");
-		}
-		else 
-		{
-			sprintf(lcdStringVel,"Velocity: %.2f%%", vel);
-		}
-		CLCD_I2C_SetCursor(&LCD1, 0, 0);
-		CLCD_I2C_WriteString(&LCD1,lcdStringVel);
-		CLCD_I2C_SetCursor(&LCD1, 0, 1);
-		CLCD_I2C_WriteString(&LCD1,lcdStringBtn);
-		lastValue = sendData;
-	
+		
+
   }
   /* USER CODE END 3 */
 }
@@ -312,9 +352,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 99;
+  htim1.Init.Prescaler = 399;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 359;
+  htim1.Init.Period = 899;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -521,14 +561,60 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PB0 PB1 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM1) 
+		{
+			direction = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? -1 : 1;// checking the direction of the car
+			encoderGet = __HAL_TIM_GET_COUNTER(&htim2);// get value from encoder of timer 2
+			if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) // check if timer 2 overflowed
+			{
+				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE); // clear overflow flag
+				if (direction == 1) count++; // increment count if car is moving forward
+				else count--; // decrement count if car is moving backward
+			}
+			encoderValue = encoderGet + (count*65535);
+			float revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
+			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
+			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
+			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
+			last_encoderValue = encoderValue;
+			
+    }
+}
 
+// tính toán PID
+float pid_controller(float setpoint, float input, float dt)
+{
+    float error = setpoint - input;
+    integral += error * dt;
+    derivative = (error - last_error) / dt;
+    output = Kp * error + Ki * integral + Kd * derivative;
+    last_error = error;
+    return output;
+}
+
+// dieu khien dong co dua tren pid
+void dc_motor_control(float setpoint, float input)
+{
+    output = pid_controller(setpoint, input, sampleTime);
+    // gioi han gia tri pwm trong khoang 0 den 1
+    if (output > 1.0)
+        output = 1.0;
+    else if (output < 0.0)
+        output = 0.0;
+    // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+    pwm_value = (uint16_t)(output * 65535);
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+}
 
 /* USER CODE END 4 */
 
