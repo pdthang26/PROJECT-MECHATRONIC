@@ -59,13 +59,17 @@ float posInRad =0, posInMeter = 0;
 int count=-1;
 
 // Variable PID
-float Kp = 10.0;
-float Ki = 0.5;
-float Kd = 0.1;
+float Kp = 2;
+float Ki = 0;
+float Kd = 0;
 float integral = 0.0;
 float derivative = 0.0;
 float last_error = 0.0;
 float output = 0.0;
+
+double E, E1, E2;
+double alpha, beta, gamma;
+double Output, LastOutput;
 
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
@@ -129,7 +133,6 @@ int main(void)
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
-	setpoint =100;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -391,12 +394,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 // tính toán PID
 float pid_controller(float setpoint, float input, float dt)
 {
-    float error = setpoint - input;
-    integral += error * dt;
-    derivative = (error - last_error) / dt;
-    output = Kp * error + Ki * integral + Kd * derivative;
-    last_error = error;
-    return output;
+//    float error = setpoint - input;
+//    integral += error * dt;
+//    derivative = (error - last_error) / dt;
+//    output = Kp * error + Ki * integral + Kd * derivative;
+//    last_error = error;
+//    return output;
+	float E = setpoint - input;
+	alpha = 2 *sampleTime*Kp + Ki* sampleTime * sampleTime + 2*Kd;
+  beta = sampleTime * sampleTime * Ki - 4 * Kd - 2 * sampleTime * Kp;
+  gamma = 2 * Kd;
+  Output = (alpha * E + beta * E1 + gamma * E2 + 2 * sampleTime * LastOutput) / (2 * sampleTime);
+  LastOutput = Output;
+  //Serial.println(int(tocdo));
+  E2 = E1;
+  E1 = E;
+	return Output;
 }
 
 // dieu khien dong co dua tren pid
@@ -404,12 +417,12 @@ void dc_motor_control(float setpoint, float input)
 {
     output = pid_controller(setpoint, input, sampleTime);
     // gioi han gia tri pwm trong khoang 0 den 1
-    if (output > 1.0)
-        output = 1.0;
+    if (output > 100.0)
+        output = 100.0;
     else if (output < 0.0)
         output = 0.0;
     // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-    pwm_value = (uint16_t)(output * 65535);
+    pwm_value = (uint16_t)(output*0.01 * 65535);
     __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
 }
 
