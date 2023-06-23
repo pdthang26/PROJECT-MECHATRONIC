@@ -33,7 +33,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define diameter            0.4 //(m)
-#define PI                    3.14159
+#define PI                  3.14159
+#define IDLE								0
+#define AUTO								1
+#define MANUAL							2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -53,16 +56,18 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-//CLCD_I2C_Name LCD1;
+CLCD_I2C_Name LCD1;
 float adcValue;
-
+uint8_t mode=0, btnState, changeMode;
+char lcdRPM[16];
+char lcdEncoderValue[16];
 
 // Encoder varible
 int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 22; // pulse per revolution
+const float pulsesPerRevolution = 11; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -156,7 +161,7 @@ int main(void)
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
 	setpoint =100;
 	
-//	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
+	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -166,39 +171,59 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
+		switch (mode)
 		{
-			HAL_Delay(20);
-			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
-			{
-				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)==0)
+			case IDLE:
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
+				break;
+			case AUTO:
+				if(changeMode!=mode)
 				{
-					adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+					CLCD_I2C_Clear(&LCD1);
+					CLCD_I2C_SetCursor(&LCD1, 0,0);
+					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+					changeMode=mode;
+				}
+				break;
+			case MANUAL:
+				if(changeMode!=mode)
+				{
+					CLCD_I2C_Clear(&LCD1);
+					CLCD_I2C_SetCursor(&LCD1, 0,0);
+					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
+					changeMode=mode;
+					HAL_Delay(2000);
+				}
+				CLCD_I2C_Clear(&LCD1);
+				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
+				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+				sprintf(lcdRPM,"ADC:%.2f",adcValue*100);
+				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				if((btnState&0x01) ==0)
+				{
 					pwmValueCW = (uint16_t)(65535 * adcValue);
 					pwmValueCCW = 0;
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+					
 				}
-				pwmValueCW = 0;
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-			}
-		}
-		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
-		{
-			HAL_Delay(20);
-			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
-			{
-				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)==0)
-				{
-					adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+				else if((btnState>>1&0x01) ==0)
+				{				
 					pwmValueCW = 0;
 					pwmValueCCW = (uint16_t)(65535 * adcValue);
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 				}
-				pwmValueCCW = 0;
+				else 
+				{
+					pwmValueCW = 0;
+					pwmValueCCW = 0;
+				}
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-			}
+			
+				break;
 		}
 		
 
@@ -552,8 +577,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA2 PA3 PA4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4;
+  /*Configure GPIO pins : PA1 PA2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA3 PA4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -564,6 +595,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
 }
 
@@ -582,11 +620,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			}
 			encoderValue = encoderGet + (count*65535);
 			float revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+			last_encoderValue = encoderValue;
 			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			last_encoderValue = encoderValue;
+			
 			
     }
 }
@@ -615,6 +654,13 @@ void dc_motor_control(float setpoint, float input)
     pwm_value = (uint16_t)(output * 65535);
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 }
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin==GPIO_PIN_1) mode = AUTO;
+	
+	else if (GPIO_Pin==GPIO_PIN_2) mode = MANUAL;
+}
+
 
 /* USER CODE END 4 */
 
