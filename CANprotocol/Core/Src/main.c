@@ -70,9 +70,7 @@ uint8_t               TxData[8];
 uint8_t               RxData[8];
 uint32_t              TxMailbox;
 
-uint8_t count = 0;
-int isTransmit = 0;
-int indx=0;
+
 /* USER CODE END 0 */
 
 /**
