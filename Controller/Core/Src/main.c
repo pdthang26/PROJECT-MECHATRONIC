@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +31,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MASTER_ID      			0x281
+#define SLAVE_ID1   				0x012
+#define SLAVE_ID2   				0x274
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,11 +47,19 @@ CAN_HandleTypeDef hcan;
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-//uint16_t pulse1, pulse2;
-//uint16_t pulse_width_1, pulse_width_2;
-//uint16_t lastValueChannel1 = 0, lastValueChannel2 = 0;
-
+// controller variable
 uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
+uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+
+// CAN protocol variable
+CAN_HandleTypeDef     CanHandle;
+CAN_TxHeaderTypeDef   TxHeader;
+CAN_RxHeaderTypeDef   RxHeader;
+char              	  TxThro[8];
+char              	  TxAile[8];
+uint8_t               RxData[8];
+uint32_t              TxMailbox;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +69,8 @@ static void MX_TIM2_Init(void);
 static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
-
+void WriteCAN(uint16_t ID,uint8_t *data);
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -97,9 +109,16 @@ int main(void)
   MX_TIM2_Init();
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
-//	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-//	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+
 	HAL_TIM_Base_Start(&htim2);
+	HAL_CAN_Start(&hcan);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+  TxHeader.DLC = 8;
+  TxHeader.ExtId = 0;
+  TxHeader.IDE = CAN_ID_STD;
+  TxHeader.RTR = CAN_RTR_DATA;
+  TxHeader.TransmitGlobalTime = DISABLE;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,9 +128,22 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		pulseWidthThro = pulseIn(GPIO_PIN_0,1,100);
-		pulseWidthAile = pulseIn(GPIO_PIN_1,1,100);
-  }
+		pulseWidthThro = pulseIn(GPIO_PIN_1,1,100);
+		pulseWidthAile = pulseIn(GPIO_PIN_0,1,100);
+		
+		if(lastPulseWidthThro != pulseWidthThro)
+		{
+			sprintf(TxThro,"%d",pulseWidthThro );
+			WriteCAN(SLAVE_ID1,(uint8_t*)TxThro );
+		}
+		if(lastPulseWidthAile != pulseWidthAile)
+		{
+			sprintf(TxAile,"%d",pulseWidthAile );
+			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
+		}
+		lastPulseWidthThro = pulseWidthThro;
+		lastPulseWidthAile = pulseWidthAile;
+	}
   /* USER CODE END 3 */
 }
 
@@ -186,7 +218,20 @@ static void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
+  CAN_FilterTypeDef canfilterconfig;
 
+  canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
+  canfilterconfig.FilterBank = 0;
+  canfilterconfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canfilterconfig.FilterIdHigh = 0x0000;
+  canfilterconfig.FilterIdLow = 0x0000;
+  canfilterconfig.FilterMaskIdHigh = 0x0000;
+  canfilterconfig.FilterMaskIdLow = 0x0000;
+  canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfilterconfig.SlaveStartFilterBank = 13;
+
+  HAL_CAN_ConfigFilter(&hcan, &canfilterconfig);
   /* USER CODE END CAN_Init 2 */
 
 }
@@ -269,31 +314,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-//{
-//	if(htim->Instance == TIM2) 
-//	{
-//    if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) 
-//		{
-//			pulse1 = TIM2->CNT - lastValueChannel1;
-//			lastValueChannel1 = TIM2->CNT;
-//			if (pulse1<3000) pulse_width_1 = pulse1;
-//		} 
-//		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) 
-//		{
-//			pulse2 = TIM2->CNT - lastValueChannel2; 
-//			lastValueChannel2 = TIM2->CNT;
-//			if (pulse1<3000) pulse_width_2 = pulse2;
-//		}
-//	}	
-//}
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
 {
     uint32_t startTime = HAL_GetTick();
     uint32_t timeoutTime = startTime + timeout;
     uint32_t lastTime;
-    uint32_t pulseWidth = 0;
+    uint32_t pulse = 0;
     uint32_t inputState = 0;
+		uint32_t pulseWidth=0;
     
     if (state == 1)
     {
@@ -322,9 +350,42 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
         }
     }
     
-    pulseWidth = TIM2->CNT - lastTime;
-    
+    pulse = TIM2->CNT - lastTime;
+		
+		pulseWidth = (pulse-110)*100/(190-110);
+		if(pulseWidth > 100)pulseWidth=0;
     return pulseWidth;
+}
+
+
+void WriteCAN(uint16_t ID,uint8_t *data)
+{
+	uint8_t dataOut[8];
+	TxHeader.StdId = ID;
+	dataOut[0] = data[0];
+	dataOut[1] = data[1];
+	dataOut[2] = data[2];
+	dataOut[3] = data[3];
+	dataOut[4] = data[4];
+	dataOut[5] = data[5];
+	dataOut[6] = data[6];
+	dataOut[7] = data[7];
+	
+	if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, dataOut, &TxMailbox) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
+	{
+		if(RxHeader.StdId==SLAVE_ID1)
+		{
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		}
+	}
+	
 }
 /* USER CODE END 4 */
 

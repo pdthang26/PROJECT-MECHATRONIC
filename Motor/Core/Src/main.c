@@ -106,6 +106,8 @@ static void MX_CAN_Init(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
 float pid_controller(float setpoint, float input, float dt);
+void WriteCAN(uint16_t ID,uint8_t *data);
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
 /* USER CODE END PFP */
 
@@ -150,15 +152,15 @@ int main(void)
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
-	
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13,1);
 	//initial CAN protocol
+	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 
   TxHeader.DLC = 8;
   TxHeader.ExtId = 0;
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
-  TxHeader.StdId = MASTER_ID;
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
@@ -251,7 +253,7 @@ static void MX_CAN_Init(void)
   CAN_FilterTypeDef canfilterconfig;
 
   canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
-  canfilterconfig.FilterBank = 0;
+  canfilterconfig.FilterBank = 10;
   canfilterconfig.FilterFIFOAssignment = CAN_RX_FIFO0;
   canfilterconfig.FilterIdHigh = 0x0000;
   canfilterconfig.FilterIdLow = 0x0000;
@@ -467,7 +469,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			last_encoderValue = encoderValue;
 			dc_motor_control(setpoint, rpm);
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			
     }
 }
 
@@ -506,10 +508,10 @@ void dc_motor_control(float setpoint, float input)
     __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
 }
 
-void WriteCAN(uint8_t *data)
+void WriteCAN(uint16_t ID,uint8_t *data)
 {
 	uint8_t dataOut[8];
-	
+	TxHeader.StdId = ID;
 	dataOut[0] = data[0];
 	dataOut[1] = data[1];
 	dataOut[2] = data[2];
