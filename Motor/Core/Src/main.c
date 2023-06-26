@@ -88,7 +88,7 @@ double Output, LastOutput;
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
 float setpoint = 0;
-
+float test = 0;
 
 
 
@@ -174,7 +174,9 @@ while (1)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
+		pwm_value = (uint16_t)(test*0.01 * 65535);
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+		HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -468,7 +470,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			last_encoderValue = encoderValue;
-			dc_motor_control(setpoint, rpm);
+//			dc_motor_control(setpoint, rpm);
 			
     }
 }

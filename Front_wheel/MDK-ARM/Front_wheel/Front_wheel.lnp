@@ -17,10 +17,10 @@
 "front_wheel\stm32f1xx_hal_flash.o"
 "front_wheel\stm32f1xx_hal_flash_ex.o"
 "front_wheel\stm32f1xx_hal_exti.o"
+"front_wheel\stm32f1xx_hal_can.o"
 "front_wheel\stm32f1xx_hal_i2c.o"
 "front_wheel\stm32f1xx_hal_tim.o"
 "front_wheel\stm32f1xx_hal_tim_ex.o"
-"front_wheel\stm32f1xx_hal_uart.o"
 "front_wheel\system_stm32f1xx.o"
 --strict --scatter "Front_wheel\Front_wheel.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols

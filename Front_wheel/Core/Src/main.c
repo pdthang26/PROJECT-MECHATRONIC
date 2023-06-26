@@ -37,6 +37,9 @@
 #define IDLE								0
 #define AUTO								1
 #define MANUAL							2
+#define MASTER_ID      			0x281
+#define SLAVE_ID1   				0x012
+#define SLAVE_ID2   				0x274
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,13 +50,13 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+CAN_HandleTypeDef hcan;
+
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-
-UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 CLCD_I2C_Name LCD1;
@@ -62,12 +65,22 @@ uint8_t mode=0, btnState, changeMode;
 char lcdRPM[16];
 char lcdEncoderValue[16];
 
+
+// CAN protocol variable
+CAN_HandleTypeDef     CanHandle;
+CAN_TxHeaderTypeDef   TxHeader;
+CAN_RxHeaderTypeDef   RxHeader;
+uint8_t               TxData[8];
+uint8_t               RxData[8];
+uint32_t              TxMailbox;
+
+
 // Encoder varible
 int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 11; // pulse per revolution
+const float pulsesPerRevolution = 200; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -76,12 +89,26 @@ int count=-1;
 
 // Variable PID
 float Kp = 10.0;
-float Ki = 0.5;
+float Ki = 3;
 float Kd = 0.1;
-float integral = 0.0;
-float derivative = 0.0;
+float N = 1;
+float Kb = 1;
 float last_error = 0.0;
+float lastDerivative = 0.0;
+float lastDerivativeLowPastFilter = 0.0;
+float lastIntegral = 0.0;
+float e_reset = 0.0;
+float alpha =0.0; 
+float resultPID = 0.0;
+float integral = 0.0;
+float derivativeLowPastFilter = 0.0;
+float derivative = 0.0;
+float polytomial = 0.0;
+float outputSaturation = 0.0;
 float output = 0.0;
+float error;
+
+
 
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
@@ -97,15 +124,17 @@ float setpoint = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
 float pid_controller(float setpoint, float input, float dt);
+void WriteCAN(uint16_t ID,uint8_t *data);
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -142,11 +171,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
+  MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 	// start analog to digital convert
 	HAL_ADC_Start(&hadc1);
@@ -159,9 +188,22 @@ int main(void)
 	// Enable motor
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,1);// active for run Clockwise direction
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
-	setpoint =100;
+	setpoint =700;
 	
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
+	
+	// Initial CAN protocol
+	HAL_CAN_Start(&hcan);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+  TxHeader.DLC = 8;
+  TxHeader.ExtId = 0;
+  TxHeader.IDE = CAN_ID_STD;
+  TxHeader.RTR = CAN_RTR_DATA;
+  TxHeader.TransmitGlobalTime = DISABLE;
+	
+	
+	alpha = sampleTime/(N+sampleTime);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -321,6 +363,57 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief CAN Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN_Init(void)
+{
+
+  /* USER CODE BEGIN CAN_Init 0 */
+
+  /* USER CODE END CAN_Init 0 */
+
+  /* USER CODE BEGIN CAN_Init 1 */
+
+  /* USER CODE END CAN_Init 1 */
+  hcan.Instance = CAN1;
+  hcan.Init.Prescaler = 18;
+  hcan.Init.Mode = CAN_MODE_NORMAL;
+  hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_2TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan.Init.TimeTriggeredMode = DISABLE;
+  hcan.Init.AutoBusOff = DISABLE;
+  hcan.Init.AutoWakeUp = DISABLE;
+  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.ReceiveFifoLocked = DISABLE;
+  hcan.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN_Init 2 */
+	  CAN_FilterTypeDef canfilterconfig;
+
+  canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
+  canfilterconfig.FilterBank = 10;
+  canfilterconfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canfilterconfig.FilterIdHigh = 0x0000;
+  canfilterconfig.FilterIdLow = 0x0000;
+  canfilterconfig.FilterMaskIdHigh = 0x0000;
+  canfilterconfig.FilterMaskIdLow = 0x0000;
+  canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfilterconfig.SlaveStartFilterBank = 13;
+
+  HAL_CAN_ConfigFilter(&hcan, &canfilterconfig);
+
+  /* USER CODE END CAN_Init 2 */
 
 }
 
@@ -517,39 +610,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -625,40 +685,107 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			
+			dc_motor_control(setpoint, posInRad);
 			
     }
 }
 
 // tính toán PID
-float pid_controller(float setpoint, float input, float dt)
+float pid_controller(float setpoint, float input, float Ts)
 {
-    float error = setpoint - input;
-    integral += error * dt;
-    derivative = (error - last_error) / dt;
-    output = Kp * error + Ki * integral + Kd * derivative;
-    last_error = error;
-    return output;
+	error = setpoint - input;
+
+	// P
+	polytomial = Kp * error; 
+	
+	// I
+	integral = lastIntegral + Ki* Ts* (error - last_error) / 2 + Kb*Ts* e_reset ;
+	
+	
+	// D
+	derivative = Kd*(error - last_error) / Ts;
+	derivativeLowPastFilter = (1-alpha)*lastDerivativeLowPastFilter + alpha* derivative;
+	
+	
+	
+	output = polytomial + integral + derivativeLowPastFilter;
+	
+	if (output > 100)
+        outputSaturation = 100;
+  else if (output < - 100)
+        outputSaturation = -100;
+	else 
+	{
+		outputSaturation=output;
+	}
+	
+	e_reset = outputSaturation - output;
+	
+	lastDerivativeLowPastFilter = derivativeLowPastFilter;
+	lastIntegral = integral;
+	last_error = error;
+	return outputSaturation;
 }
 
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
 {
-    output = pid_controller(setpoint, input, sampleTime);
-    // gioi han gia tri pwm trong khoang 0 den 1
-    if (output > 1.0)
-        output = 1.0;
-    else if (output < 0.0)
-        output = 0.0;
-    // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-    pwm_value = (uint16_t)(output * 65535);
-    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+	if (mode == AUTO)
+	{
+		resultPID = pid_controller(setpoint, input, sampleTime);
+			
+			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+		if (resultPID <0)
+		{
+			pwmValueCCW = (uint16_t)(-resultPID *0.1* 65535);
+			pwmValueCW = 0;
+		}
+		else if (resultPID>0)
+		{
+			pwmValueCW = (uint16_t)(resultPID *0.1* 65535);
+			pwmValueCCW = 0;
+		}
+		else
+		{
+			pwmValueCCW = 0;
+			pwmValueCW = 0;
+		}
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+	}
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin==GPIO_PIN_1) mode = AUTO;
 	
 	else if (GPIO_Pin==GPIO_PIN_2) mode = MANUAL;
+}
+
+void WriteCAN(uint16_t ID,uint8_t *data)
+{
+	uint8_t dataOut[8];
+	TxHeader.StdId = ID;
+	dataOut[0] = data[0];
+	dataOut[1] = data[1];
+	dataOut[2] = data[2];
+	dataOut[3] = data[3];
+	dataOut[4] = data[4];
+	dataOut[5] = data[5];
+	dataOut[6] = data[6];
+	dataOut[7] = data[7];
+	HAL_CAN_AddTxMessage(&hcan, &TxHeader, dataOut, &TxMailbox);
+	
+}
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
+	{
+		if(RxHeader.StdId==SLAVE_ID2)
+		{
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		}
+	}
+	
 }
 
 
