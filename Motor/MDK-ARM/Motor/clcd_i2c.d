@@ -1,5 +1,4 @@
-motor/stm32f1xx_hal_flash.o: \
-  ..\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_flash.c \
+motor/clcd_i2c.o: ..\Core\Src\CLCD_I2C.c ..\Core\Inc\CLCD_I2C.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal.h \
   ..\Core\Inc\stm32f1xx_hal_conf.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_rcc.h \

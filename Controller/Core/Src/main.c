@@ -55,8 +55,8 @@ uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
 CAN_HandleTypeDef     CanHandle;
 CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
-char              	  TxThro[8];
-char              	  TxAile[8];
+uint8_t              	TxThro[8];
+uint8_t              	TxAile[8];
 uint8_t               RxData[8];
 uint32_t              TxMailbox;
 
@@ -71,6 +71,7 @@ static void MX_CAN_Init(void);
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+void assignUint32_tChar8byte(uint32_t value, char* buffer);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -133,14 +134,15 @@ int main(void)
 		
 		if(lastPulseWidthThro != pulseWidthThro)
 		{
-			sprintf(TxThro,"%d",pulseWidthThro );
-			WriteCAN(SLAVE_ID1,(uint8_t*)TxThro );
+			TxThro[7] = (uint8_t)pulseWidthThro;
+			WriteCAN(SLAVE_ID1,TxThro );
 		}
 		if(lastPulseWidthAile != pulseWidthAile)
 		{
-			sprintf(TxAile,"%d",pulseWidthAile );
+			TxThro[7] = (uint8_t)pulseWidthAile;
 			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
 		}
+		
 		lastPulseWidthThro = pulseWidthThro;
 		lastPulseWidthAile = pulseWidthAile;
 	}
@@ -385,8 +387,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 		}
 	}
-	
 }
+
+
 /* USER CODE END 4 */
 
 /**
