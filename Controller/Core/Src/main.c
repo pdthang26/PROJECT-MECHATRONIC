@@ -139,7 +139,7 @@ int main(void)
 		}
 		if(lastPulseWidthAile != pulseWidthAile)
 		{
-			TxThro[7] = (uint8_t)pulseWidthAile;
+			TxAile[7] = (uint8_t)pulseWidthAile;
 			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
 		}
 		

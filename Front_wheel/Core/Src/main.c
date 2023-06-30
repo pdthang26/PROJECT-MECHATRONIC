@@ -61,6 +61,7 @@ TIM_HandleTypeDef htim3;
 /* USER CODE BEGIN PV */
 CLCD_I2C_Name LCD1;
 float adcValue;
+float aileValue;
 uint8_t mode=0, btnState, changeMode;
 char lcdRPM[16];
 char lcdEncoderValue[16];
@@ -72,6 +73,7 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
+uint8_t               RxDataAile[8];
 uint32_t              TxMailbox;
 
 
@@ -238,21 +240,43 @@ int main(void)
 					HAL_Delay(2000);
 				}
 				CLCD_I2C_Clear(&LCD1);
-				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
+//				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
+				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdRPM,"ADC:%.2f",adcValue*100);
-				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+//				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
-				if((btnState&0x01) ==0)
+//				if((btnState&0x01) ==0)
+//				{
+//					pwmValueCW = (uint16_t)(65535 * adcValue);
+//					pwmValueCCW = 0;
+//					
+//				}
+//				else if((btnState>>1&0x01) ==0)
+//				{				
+//					pwmValueCW = 0;
+//					pwmValueCCW = (uint16_t)(65535 * adcValue);
+//				}
+//				else 
+//				{
+//					pwmValueCW = 0;
+//					pwmValueCCW = 0;
+//				}
+//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+
+
+				if(aileValue <15)
 				{
 					pwmValueCW = (uint16_t)(65535 * adcValue);
 					pwmValueCCW = 0;
 					
 				}
-				else if((btnState>>1&0x01) ==0)
+				else if(aileValue >75)
 				{				
 					pwmValueCW = 0;
 					pwmValueCCW = (uint16_t)(65535 * adcValue);
@@ -264,7 +288,6 @@ int main(void)
 				}
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-			
 				break;
 		}
 		
@@ -783,6 +806,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==SLAVE_ID2)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			RxDataAile[7]=RxData[7];
 		}
 	}
 	

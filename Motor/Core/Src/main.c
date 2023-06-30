@@ -59,6 +59,7 @@ TIM_HandleTypeDef htim4;
 //LCD variable
 CLCD_I2C_Name LCD1;
 float adcValue;
+float throValue;
 char lcdRPM[16];
 char lcdEncoderValue[16];
 
@@ -70,7 +71,7 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
-uint8_t               RxData1[8];
+uint8_t               RxDataThro[8];
 uint32_t              TxMailbox;
 
 
@@ -104,7 +105,7 @@ double Output, LastOutput;
 uint16_t pwm_value = 0;
 float setpoint = 0;
 float test = 0;
-uint32_t test1;
+
 
 
 
@@ -199,13 +200,16 @@ while (1)
 
     /* USER CODE BEGIN 3 */
 		adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-		sprintf(lcdRPM,"ADC:%.0f",adcValue*100);
-		sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+		throValue = (float)RxDataThro[7];
+		sprintf(lcdRPM,"ADC:%.1f",throValue);
+		sprintf(lcdEncoderValue,"encoder:%.2f",rpm);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,lcdRPM);
 		
+		pwm_value = (uint16_t)(throValue*0.01 * 65535);
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
 		
   }
   /* USER CODE END 3 */
@@ -605,7 +609,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			last_encoderValue = encoderValue;
-			dc_motor_control(setpoint, rpm);
+//			dc_motor_control(setpoint, rpm);
 			
     }
 }
@@ -667,6 +671,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==SLAVE_ID1)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			RxDataThro[7]=RxData[7];
 		}
 	}
 	
