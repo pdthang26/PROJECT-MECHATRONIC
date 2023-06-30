@@ -87,26 +87,35 @@ int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
 int count=-1;
 
-// Variable PID
-float Kp = 10.0;
-float Ki = 3;
-float Kd = 0.1;
-float N = 1;
-float Kb = 1;
-float last_error = 0.0;
-float lastDerivative = 0.0;
-float lastDerivativeLowPastFilter = 0.0;
-float lastIntegral = 0.0;
-float e_reset = 0.0;
-float alpha =0.0; 
-float resultPID = 0.0;
+//// Variable PID
+//float Kp = 10.0;
+//float Ki = 3;
+//float Kd = 0.1;
+//float N = 1;
+//float Kb = 1;
+//float last_error = 0.0;
+//float lastDerivative = 0.0;
+//float lastDerivativeLowPastFilter = 0.0;
+//float lastIntegral = 0.0;
+//float e_reset = 0.0;
+//float alpha =0.0; 
+//float resultPID = 0.0;
+//float integral = 0.0;
+//float derivativeLowPastFilter = 0.0;
+//float derivative = 0.0;
+//float polytomial = 0.0;
+//float outputSaturation = 0.0;
+//float output = 0.0;
+//float error;
+
+//PID 
+float Kp = 0.8;
+float Ki = 0;
+float Kd = 2;
+float Ts = 0.01; // 100ms
+float prev_error = 0.0;
 float integral = 0.0;
-float derivativeLowPastFilter = 0.0;
-float derivative = 0.0;
-float polytomial = 0.0;
-float outputSaturation = 0.0;
-float output = 0.0;
-float error;
+float input, output;
 
 
 
@@ -132,7 +141,7 @@ static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
-float pid_controller(float setpoint, float input, float dt);
+float pid_controller(float setpoint, float input, float *prev_error, float *integral);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 /* USER CODE END PFP */
@@ -184,11 +193,11 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // khoi dong PWM tai channel 1
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // khoi dong PWM tai channel 2
 	// Enable motor
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,1);// active for run Clockwise direction
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
-	setpoint =700;
+	setpoint = 3000;
 	
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
 	
@@ -203,7 +212,8 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
-	alpha = sampleTime/(N+sampleTime);
+	//alpha = sampleTime/(N+sampleTime);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -685,46 +695,66 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			dc_motor_control(setpoint, posInRad);
+			dc_motor_control(setpoint, encoderValue);
 			
     }
 }
 
-// tính toán PID
-float pid_controller(float setpoint, float input, float Ts)
-{
-	error = setpoint - input;
+//// tính toán PID
+//float pid_controller(float setpoint, float input, float Ts)
+//{
+//	error = setpoint - input;
 
-	// P
-	polytomial = Kp * error; 
+//	// P
+//	polytomial = Kp * error; 
+//	
+//	// I
+//	integral = lastIntegral + Ki* Ts* (error - last_error) / 2 + Kb*Ts* e_reset ;
+//	
+//	
+//	// D
+//	derivative = Kd*(error - last_error) / Ts;
+//	derivativeLowPastFilter = (1-alpha)*lastDerivativeLowPastFilter + alpha* derivative;
+//	
+//	
+//	
+//	output = polytomial + integral + derivativeLowPastFilter;
+//	
+//	if (output > 100)
+//        outputSaturation = 100;
+//  else if (output < - 100)
+//        outputSaturation = -100;
+//	else 
+//	{
+//		outputSaturation=output;
+//	}
+//	
+//	e_reset = outputSaturation - output;
+//	
+//	lastDerivativeLowPastFilter = derivativeLowPastFilter;
+//	lastIntegral = integral;
+//	last_error = error;
+//	return outputSaturation;
+//}
+
+
+// Traditional PID
+float pid_controller(float setpoint, float input, float *prev_error, float *integral) {
 	
-	// I
-	integral = lastIntegral + Ki* Ts* (error - last_error) / 2 + Kb*Ts* e_reset ;
+    float error = setpoint - input; // Calculating error
+    float derivative = (error - *prev_error) / Ts; // Calculating derivation of error
+    float output = Kp * error + Ki * (*integral) + Kd * derivative; // Tính giá tr? d?u ra c?a hàm di?u khi?n
+
+    // Luu tr? sai s? và tích phân
+    *prev_error = error;
+    *integral += error * Ts;
 	
-	
-	// D
-	derivative = Kd*(error - last_error) / Ts;
-	derivativeLowPastFilter = (1-alpha)*lastDerivativeLowPastFilter + alpha* derivative;
-	
-	
-	
-	output = polytomial + integral + derivativeLowPastFilter;
-	
-	if (output > 100)
-        outputSaturation = 100;
-  else if (output < - 100)
-        outputSaturation = -100;
-	else 
-	{
-		outputSaturation=output;
-	}
-	
-	e_reset = outputSaturation - output;
-	
-	lastDerivativeLowPastFilter = derivativeLowPastFilter;
-	lastIntegral = integral;
-	last_error = error;
-	return outputSaturation;
+		if (output > 100)
+        output = 100;
+    else if (output < - 100)
+        output = -100;
+		
+    return output;
 }
 
 // dieu khien dong co dua tren pid
@@ -732,17 +762,17 @@ void dc_motor_control(float setpoint, float input)
 {
 	if (mode == AUTO)
 	{
-		resultPID = pid_controller(setpoint, input, sampleTime);
+		output = pid_controller(setpoint, input, &prev_error, &integral);
 			
 			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-		if (resultPID <0)
+		if (output <0)
 		{
-			pwmValueCCW = (uint16_t)(-resultPID *0.1* 65535);
+			pwmValueCCW = (uint16_t)(-output *0.1* 8500);
 			pwmValueCW = 0;
 		}
-		else if (resultPID>0)
+		else if (output>0)
 		{
-			pwmValueCW = (uint16_t)(resultPID *0.1* 65535);
+			pwmValueCW = (uint16_t)(output *0.1* 8500);
 			pwmValueCCW = 0;
 		}
 		else
