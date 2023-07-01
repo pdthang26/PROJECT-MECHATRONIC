@@ -111,9 +111,9 @@ int count=-1;
 //float error;
 
 //PID 
-float Kp = 0.8;
+float Kp = 0.1;
 float Ki = 0;
-float Kd = 2;
+float Kd = 0;
 float Ts = 0.01; // 100ms
 float prev_error = 0.0;
 float integral = 0.0;
@@ -199,7 +199,7 @@ int main(void)
 	// Enable motor
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,1);// active for run Clockwise direction
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
-	setpoint = 3000;
+	setpoint = -5000;
 	
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
 	
@@ -280,13 +280,13 @@ int main(void)
 //				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 
 
-				if(aileValue <15)
+				if(aileValue >75)
 				{
 					pwmValueCW = (uint16_t)(65535 * adcValue);
 					pwmValueCCW = 0;
 					
 				}
-				else if(aileValue >75)
+				else if(aileValue <15)
 				{				
 					pwmValueCW = 0;
 					pwmValueCCW = (uint16_t)(65535 * adcValue);
@@ -803,8 +803,8 @@ void dc_motor_control(float setpoint, float input)
 			pwmValueCCW = 0;
 			pwmValueCW = 0;
 		}
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCCW);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCW);
 	}
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

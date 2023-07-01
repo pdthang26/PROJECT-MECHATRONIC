@@ -84,6 +84,9 @@ void assignUint32_tChar8byte(uint32_t value, char* buffer);
   * @retval int
   */
 int main(void)
+
+
+
 {
   /* USER CODE BEGIN 1 */
 

@@ -200,7 +200,7 @@ while (1)
 
     /* USER CODE BEGIN 3 */
 		adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-		throValue = (float)RxDataThro[7];
+		throValue = (float)RxDataThro[7]*0.01;
 		sprintf(lcdRPM,"ADC:%.1f",throValue);
 		sprintf(lcdEncoderValue,"encoder:%.2f",rpm);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
@@ -208,7 +208,7 @@ while (1)
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,lcdRPM);
 		
-		pwm_value = (uint16_t)(throValue*0.01 * 65535);
+		pwm_value = (uint16_t)(throValue * 65535);
     __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
 		
   }
