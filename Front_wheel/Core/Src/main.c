@@ -803,8 +803,8 @@ void dc_motor_control(float setpoint, float input)
 			pwmValueCCW = 0;
 			pwmValueCW = 0;
 		}
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCCW);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCW);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 	}
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
