@@ -89,34 +89,12 @@ int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
 int count=-1;
 
-//// Variable PID
-//float Kp = 10.0;
-//float Ki = 3;
-//float Kd = 0.1;
-//float N = 1;
-//float Kb = 1;
-//float last_error = 0.0;
-//float lastDerivative = 0.0;
-//float lastDerivativeLowPastFilter = 0.0;
-//float lastIntegral = 0.0;
-//float e_reset = 0.0;
-//float alpha =0.0; 
-//float resultPID = 0.0;
-//float integral = 0.0;
-//float derivativeLowPastFilter = 0.0;
-//float derivative = 0.0;
-//float polytomial = 0.0;
-//float outputSaturation = 0.0;
-//float output = 0.0;
-//float error;
+
+
 
 //PID 
-float Kp = 0.1;
-float Ki = 0;
-float Kd = 0;
-float Ts = 0.01; // 100ms
-float prev_error = 0.0;
-float integral = 0.0;
+float Kp = 0.98;
+float Ts = 0.01; // 10ms
 float input, output;
 
 
@@ -143,7 +121,7 @@ static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
-float pid_controller(float setpoint, float input, float *prev_error, float *integral);
+float pid_controller(float setpoint, float input);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 /* USER CODE END PFP */
@@ -199,7 +177,7 @@ int main(void)
 	// Enable motor
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,1);// active for run Clockwise direction
 	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,1);// active for run Counter Clockwise direction
-	setpoint = -5000;
+
 	
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
 	
@@ -234,11 +212,22 @@ int main(void)
 			case AUTO:
 				if(changeMode!=mode)
 				{
+					
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+					
+					HAL_Delay(2000);
 					changeMode=mode;
 				}
+				aileValue = (float) RxDataAile[7];
+				setpoint=0.01*aileValue*10000;
+				sprintf(lcdRPM,"controll:%.1f",aileValue);
+				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdRPM);
 				break;
 			case MANUAL:
 				if(changeMode!=mode)
@@ -250,12 +239,12 @@ int main(void)
 					HAL_Delay(2000);
 				}
 				CLCD_I2C_Clear(&LCD1);
-//				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
+				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdRPM,"ADC:%.2f",adcValue*100);
-//				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
-				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
+				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+//				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -712,65 +701,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				else count--; // decrement count if car is moving backward
 			}
 			encoderValue = encoderGet + (count*65535);
-			float revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
-			last_encoderValue = encoderValue;
-			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
-			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
-			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
-			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
 			dc_motor_control(setpoint, encoderValue);
 			
     }
 }
 
-//// tính toán PID
-//float pid_controller(float setpoint, float input, float Ts)
-//{
-//	error = setpoint - input;
-
-//	// P
-//	polytomial = Kp * error; 
-//	
-//	// I
-//	integral = lastIntegral + Ki* Ts* (error - last_error) / 2 + Kb*Ts* e_reset ;
-//	
-//	
-//	// D
-//	derivative = Kd*(error - last_error) / Ts;
-//	derivativeLowPastFilter = (1-alpha)*lastDerivativeLowPastFilter + alpha* derivative;
-//	
-//	
-//	
-//	output = polytomial + integral + derivativeLowPastFilter;
-//	
-//	if (output > 100)
-//        outputSaturation = 100;
-//  else if (output < - 100)
-//        outputSaturation = -100;
-//	else 
-//	{
-//		outputSaturation=output;
-//	}
-//	
-//	e_reset = outputSaturation - output;
-//	
-//	lastDerivativeLowPastFilter = derivativeLowPastFilter;
-//	lastIntegral = integral;
-//	last_error = error;
-//	return outputSaturation;
-//}
 
 
 // Traditional PID
-float pid_controller(float setpoint, float input, float *prev_error, float *integral) {
+float pid_controller(float setpoint, float input) {
 	
     float error = setpoint - input; // Calculating error
-    float derivative = (error - *prev_error) / Ts; // Calculating derivation of error
-    float output = Kp * error + Ki * (*integral) + Kd * derivative; // Tính giá tr? d?u ra c?a hàm di?u khi?n
+    
+    float output = Kp * error  ; // Tính giá tr? d?u ra c?a hàm di?u khi?n
 
     // Luu tr? sai s? và tích phân
-    *prev_error = error;
-    *integral += error * Ts;
+    
+    
 	
 		if (output > 100)
         output = 100;
@@ -783,19 +730,19 @@ float pid_controller(float setpoint, float input, float *prev_error, float *inte
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
 {
-	if (mode == AUTO)
+	if (mode == AUTO && changeMode==mode)
 	{
-		output = pid_controller(setpoint, input, &prev_error, &integral);
+		output = pid_controller(setpoint, input);
 			
 			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
 		if (output <0)
 		{
-			pwmValueCCW = (uint16_t)(-output *0.1* 8500);
+			pwmValueCCW = (uint16_t)(-output *0.01* 20000);
 			pwmValueCW = 0;
 		}
 		else if (output>0)
 		{
-			pwmValueCW = (uint16_t)(output *0.1* 8500);
+			pwmValueCW = (uint16_t)(output *0.01* 20000);
 			pwmValueCCW = 0;
 		}
 		else
@@ -809,7 +756,11 @@ void dc_motor_control(float setpoint, float input)
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if (GPIO_Pin==GPIO_PIN_1) mode = AUTO;
+	if (GPIO_Pin==GPIO_PIN_1) 
+	{
+		mode = AUTO;
+		output = 0;
+	}
 	
 	else if (GPIO_Pin==GPIO_PIN_2) mode = MANUAL;
 }
