@@ -21,17 +21,27 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.9.0
 Dialog DLL:      TCM.DLL V1.56.1.0
  
 <h2>Project:</h2>
-D:\PROJECT-MECHATRONIC\Break\MDK-ARM\Break.uvprojx
-Project File Date:  07/02/2023
+C:\Users\dinhthang\Desktop\Break\MDK-ARM\Break.uvprojx
+Project File Date:  07/05/2023
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.18', folder: 'C:\Keil_v5\ARM\ARMCLANG\Bin'
 Build target 'Break'
-compiling MPU6050.c...
+../Core/Src/main.c(240): warning: 'sprintf' will always overflow; destination buffer has size 16, but format string expands to at least 17 [-Wfortify-source]
+                                sprintf(lcdAcelX,"X:%.3f Z:%.3f ",Data.Ax,Data.Az);
+                                ^
+../Core/Src/main.c(244): warning: 'sprintf' will always overflow; destination buffer has size 16, but format string expands to at least 17 [-Wfortify-source]
+                                sprintf(lcdAcelX,"X:%.3f Z:%.3f ",Data.Gx,Data.Gz);
+                                ^
+../Core/Src/main.c(248): warning: 'sprintf' will always overflow; destination buffer has size 16, but format string expands to at least 17 [-Wfortify-source]
+                                sprintf(lcdAcelX,"X:%.3f         ",Data.KalmanAngleX);
+                                ^
+3 warnings generated.
+compiling main.c...
 linking...
-Program Size: Code=27068 RO-data=464 RW-data=24 ZI-data=2272  
+Program Size: Code=27682 RO-data=734 RW-data=156 ZI-data=2188  
 FromELF: creating hex file...
-"Break\Break.axf" - 0 Error(s), 0 Warning(s).
+"Break\Break.axf" - 0 Error(s), 3 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -55,7 +65,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:00
 </pre>
 </body>
 </html>

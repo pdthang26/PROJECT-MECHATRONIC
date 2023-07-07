@@ -250,9 +250,6 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 
     /* Peripheral clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
-    /* I2C1 interrupt Init */
-    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 4, 0);
-    HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
   /* USER CODE BEGIN I2C1_MspInit 1 */
 
   /* USER CODE END I2C1_MspInit 1 */
@@ -284,8 +281,6 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7);
 
-    /* I2C1 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
   /* USER CODE END I2C1_MspDeInit 1 */
@@ -308,9 +303,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE END TIM1_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM1_CLK_ENABLE();
-    /* TIM1 interrupt Init */
-    HAL_NVIC_SetPriority(TIM1_UP_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
   /* USER CODE END TIM1_MspInit 1 */
@@ -328,51 +320,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE BEGIN TIM3_MspInit 1 */
 
   /* USER CODE END TIM3_MspInit 1 */
-  }
-
-}
-
-/**
-* @brief TIM_Encoder MSP Initialization
-* This function configures the hardware resources used in this example
-* @param htim_encoder: TIM_Encoder handle pointer
-* @retval None
-*/
-void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef* htim_encoder)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(htim_encoder->Instance==TIM2)
-  {
-  /* USER CODE BEGIN TIM2_MspInit 0 */
-
-  /* USER CODE END TIM2_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_TIM2_CLK_ENABLE();
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**TIM2 GPIO Configuration
-    PA15     ------> TIM2_CH1
-    PB3     ------> TIM2_CH2
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_15;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = GPIO_PIN_3;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    __HAL_AFIO_REMAP_TIM2_PARTIAL_1();
-
-    /* TIM2 interrupt Init */
-    HAL_NVIC_SetPriority(TIM2_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-  /* USER CODE BEGIN TIM2_MspInit 1 */
-
-  /* USER CODE END TIM2_MspInit 1 */
   }
 
 }
@@ -417,9 +364,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE END TIM1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM1_CLK_DISABLE();
-
-    /* TIM1 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM1_UP_IRQn);
   /* USER CODE BEGIN TIM1_MspDeInit 1 */
 
   /* USER CODE END TIM1_MspDeInit 1 */
@@ -437,39 +381,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE BEGIN TIM3_MspDeInit 1 */
 
   /* USER CODE END TIM3_MspDeInit 1 */
-  }
-
-}
-
-/**
-* @brief TIM_Encoder MSP De-Initialization
-* This function freeze the hardware resources used in this example
-* @param htim_encoder: TIM_Encoder handle pointer
-* @retval None
-*/
-void HAL_TIM_Encoder_MspDeInit(TIM_HandleTypeDef* htim_encoder)
-{
-  if(htim_encoder->Instance==TIM2)
-  {
-  /* USER CODE BEGIN TIM2_MspDeInit 0 */
-
-  /* USER CODE END TIM2_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_TIM2_CLK_DISABLE();
-
-    /**TIM2 GPIO Configuration
-    PA15     ------> TIM2_CH1
-    PB3     ------> TIM2_CH2
-    */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_15);
-
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_3);
-
-    /* TIM2 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(TIM2_IRQn);
-  /* USER CODE BEGIN TIM2_MspDeInit 1 */
-
-  /* USER CODE END TIM2_MspDeInit 1 */
   }
 
 }
