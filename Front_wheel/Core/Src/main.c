@@ -112,7 +112,7 @@ int count=-1;
 float Kp = 0.8;
 float Ki = 0;
 float Kd = 2;
-float Ts = 0.01; // 100ms
+float Ts = 0.01; // 10ms
 float prev_error = 0.0;
 float integral = 0.0;
 float input, output;
