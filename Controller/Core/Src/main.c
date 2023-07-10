@@ -84,6 +84,9 @@ void assignUint32_tChar8byte(uint32_t value, char* buffer);
   * @retval int
   */
 int main(void)
+
+
+
 {
   /* USER CODE BEGIN 1 */
 
@@ -139,7 +142,7 @@ int main(void)
 		}
 		if(lastPulseWidthAile != pulseWidthAile)
 		{
-			TxThro[7] = (uint8_t)pulseWidthAile;
+			TxAile[7] = (uint8_t)pulseWidthAile;
 			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
 		}
 		
