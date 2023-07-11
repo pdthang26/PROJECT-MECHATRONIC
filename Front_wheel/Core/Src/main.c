@@ -93,8 +93,17 @@ int count=-1;
 
 
 //PID 
+<<<<<<< HEAD
+float Kp = 0.8;
+float Ki = 0;
+float Kd = 2;
+float Ts = 0.01; // 10ms
+float prev_error = 0.0;
+float integral = 0.0;
+=======
 float Kp = 0.98;
 float Ts = 0.01; // 10ms
+>>>>>>> c45a8b2ef0e5a075e754175721ced617aae7cd74
 float input, output;
 
 
