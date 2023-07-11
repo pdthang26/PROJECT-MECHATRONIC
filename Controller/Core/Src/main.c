@@ -72,6 +72,7 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
+float map(float inValue, float inMax, float inMin,float outMax, float outMin );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -84,9 +85,6 @@ void assignUint32_tChar8byte(uint32_t value, char* buffer);
   * @retval int
   */
 int main(void)
-
-
-
 {
   /* USER CODE BEGIN 1 */
 
@@ -360,6 +358,11 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
 		pulseWidth = (pulse-110)*100/(190-110);
 		if(pulseWidth > 100)pulseWidth=0;
     return pulseWidth;
+}
+
+float map(float inValue, float inMax, float inMin,float outMax, float outMin )
+{
+	return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
 }
 
 

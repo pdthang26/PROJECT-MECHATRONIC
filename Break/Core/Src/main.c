@@ -84,38 +84,7 @@ uint8_t               RxDataAile[8];
 uint32_t              TxMailbox;
 
 
-// Encoder varible
-int32_t encoderValue = 0;
-uint16_t encoderGet = 0;
-int32_t last_encoderValue = 0;
-const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 200; // pulse per revolution
-float rpm = 0; // velocity in RPM
-float mps = 0; // velocity in m/s
-int direction; // FORWARD is 1 and REVERSE is -1
-float posInRad =0, posInMeter = 0;
-int count=-1;
 
-//// Variable PID
-//float Kp = 10.0;
-//float Ki = 3;
-//float Kd = 0.1;
-//float N = 1;
-//float Kb = 1;
-//float last_error = 0.0;
-//float lastDerivative = 0.0;
-//float lastDerivativeLowPastFilter = 0.0;
-//float lastIntegral = 0.0;
-//float e_reset = 0.0;
-//float alpha =0.0; 
-//float resultPID = 0.0;
-//float integral = 0.0;
-//float derivativeLowPastFilter = 0.0;
-//float derivative = 0.0;
-//float polytomial = 0.0;
-//float outputSaturation = 0.0;
-//float output = 0.0;
-//float error;
 
 //PID 
 float Kp = 0.1;
@@ -615,42 +584,6 @@ static void MX_GPIO_Init(void)
 
 
 
-//// tính toán PID
-//float pid_controller(float setpoint, float input, float Ts)
-//{
-//	error = setpoint - input;
-
-//	// P
-//	polytomial = Kp * error; 
-//	
-//	// I
-//	integral = lastIntegral + Ki* Ts* (error - last_error) / 2 + Kb*Ts* e_reset ;
-//	
-//	
-//	// D
-//	derivative = Kd*(error - last_error) / Ts;
-//	derivativeLowPastFilter = (1-alpha)*lastDerivativeLowPastFilter + alpha* derivative;
-//	
-//	
-//	
-//	output = polytomial + integral + derivativeLowPastFilter;
-//	
-//	if (output > 100)
-//        outputSaturation = 100;
-//  else if (output < - 100)
-//        outputSaturation = -100;
-//	else 
-//	{
-//		outputSaturation=output;
-//	}
-//	
-//	e_reset = outputSaturation - output;
-//	
-//	lastDerivativeLowPastFilter = derivativeLowPastFilter;
-//	lastIntegral = integral;
-//	last_error = error;
-//	return outputSaturation;
-//}
 
 
 // Traditional PID
