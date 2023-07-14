@@ -39,6 +39,9 @@
 #define ACCELERATION				0
 #define GYROSCOPE						1
 #define ANGLE						  	2
+#define IDLE								3
+#define AUTO             		4
+#define MANUAL 							5
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
@@ -69,9 +72,11 @@ MPU6050_t 				Data;
 CLCD_I2C_Name LCD1;
 float adcValue;
 float aileValue;
-uint8_t mode=0;
+uint8_t mode=0 ;
+uint8_t mode_1 = 3, changeMode;
 char lcdAcelX[16];
 char lcdAcelY[16];
+char lcdADC[16];
 
 
 // CAN protocol variable
@@ -88,12 +93,12 @@ uint32_t              TxMailbox;
 
 //PID 
 float Kp = 0.1;
-float Ki = 0;
-float Kd = 0;
+//float Ki = 0;
+//float Kd = 0;
 float Ts = 0.01; // 100ms
-float prev_error = 0.0;
-float integral = 0.0;
-float input, output;
+//float prev_error = 0.0;
+//float integral = 0.0;
+//float input, output;
 
 
 
@@ -118,7 +123,7 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
-float pid_controller(float setpoint, float input, float *prev_error, float *integral);
+float pid_controller(float setpoint, float input);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
@@ -201,7 +206,44 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		
+		switch(mode_1){
+			case IDLE:
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
+				break;
+			case AUTO:
+				if(changeMode!=mode){
+					
+					CLCD_I2C_Clear(&LCD1);
+					CLCD_I2C_SetCursor(&LCD1, 0,0);
+					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+					
+					HAL_Delay(2000);
+					changeMode=mode;
+				}
+				break;
+			case MANUAL:
+				if(changeMode!=mode){
+					CLCD_I2C_Clear(&LCD1);
+					CLCD_I2C_SetCursor(&LCD1, 0,0);
+					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
+					changeMode=mode;
+					HAL_Delay(2000);
+				}
+				CLCD_I2C_Clear(&LCD1);
+				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+				sprintf(lcdADC,"ADC:%.2f",adcValue*100);
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1,lcdADC);
+				if ( HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0){
+					
+				  pwm_value = (uint16_t)(65535 * adcValue);
+
+				}
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+				break;
+				
+		}
 		
 		switch (mode)
 		{
@@ -587,15 +629,14 @@ static void MX_GPIO_Init(void)
 
 
 // Traditional PID
-float pid_controller(float setpoint, float input, float *prev_error, float *integral) {
+float pid_controller(float setpoint, float input){
 	
     float error = setpoint - input; // Calculating error
-    float derivative = (error - *prev_error) / Ts; // Calculating derivation of error
-    float output = Kp * error + Ki * (*integral) + Kd * derivative; // Tính giá tr? d?u ra c?a hàm di?u khi?n
+//    float derivative = (error - *prev_error) / Ts; // Calculating derivation of error
+    float output = Kp * error;
+//			+ Ki * (*integral) + Kd * derivative; // Tính giá tr? d?u ra c?a hàm di?u khi?n
 
     // Luu tr? sai s? và tích phân
-    *prev_error = error;
-    *integral += error * Ts;
 	
 		if (output > 100)
         output = 100;
@@ -637,10 +678,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin==GPIO_PIN_1)
 	{
 		mode++;
+		mode_1 = AUTO;
 		if (mode>2) mode=0;
 	
 	}
-	
+	else if (GPIO_Pin==GPIO_PIN_2){
+		
+		mode_1= MANUAL;
+		
+	}
 	else if (GPIO_Pin==GPIO_PIN_5)
 	{		
 		MPU6050_Read_All(&hi2c1, &Data);
