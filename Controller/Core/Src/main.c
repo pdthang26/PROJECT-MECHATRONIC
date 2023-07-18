@@ -68,11 +68,12 @@ static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
-uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
+
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
-float map(float inValue, float inMax, float inMin,float outMax, float outMin );
+uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
+uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -355,14 +356,26 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
     
     pulse = TIM2->CNT - lastTime;
 		
-		pulseWidth = (pulse-110)*100/(190-110);
-		if(pulseWidth > 100)pulseWidth=0;
+//		pulseWidth = (pulse-110)*100/(190-110);
+//		if(pulseWidth > 100)pulseWidth=0;
+		pulseWidth = map(pulse,190,110,100,0);
     return pulseWidth;
 }
 
-float map(float inValue, float inMax, float inMin,float outMax, float outMin )
+uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin )
 {
-	return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
+	if(inValue > inMax) 
+	{
+		return outMax;
+	}
+	else if (inValue < inMin)
+	{
+		return outMin;
+	}
+	else
+	{
+		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
+	}
 }
 
 
