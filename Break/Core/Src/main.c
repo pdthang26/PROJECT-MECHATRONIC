@@ -66,8 +66,6 @@ TIM_HandleTypeDef htim3;
 // IMU variable 
 MPU6050_t 				Data;
 
-
-
 // I2C of LCD 16x2
 CLCD_I2C_Name LCD1;
 float adcValue;
@@ -88,24 +86,15 @@ uint8_t               RxData[8];
 uint8_t               RxDataAile[8];
 uint32_t              TxMailbox;
 
-
-
-
 //PID 
-float Kp = 0.1;
-//float Ki = 0;
-//float Kd = 0;
+float Kp = 350;
 float Ts = 0.01; // 100ms
-//float prev_error = 0.0;
-//float integral = 0.0;
-//float input, output;
-
-
+float input, output;
 
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
-uint16_t pwmValueCW = 0;
-uint16_t pwmValueCCW = 0;
+//uint16_t pwmValueCW = 0;
+//uint16_t pwmValueCCW = 0;
 float setpoint = 0;
 
 
@@ -217,7 +206,7 @@ int main(void)
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
-					
+					setpoint = 0;
 					HAL_Delay(2000);
 					changeMode=mode;
 				}
@@ -235,7 +224,7 @@ int main(void)
 				sprintf(lcdADC,"ADC:%.2f",adcValue*100);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdADC);
-				if ( HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0){
+				if (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0){
 					
 				  pwm_value = (uint16_t)(65535 * adcValue);
 
@@ -631,48 +620,36 @@ static void MX_GPIO_Init(void)
 // Traditional PID
 float pid_controller(float setpoint, float input){
 	
-    float error = setpoint - input; // Calculating error
-//    float derivative = (error - *prev_error) / Ts; // Calculating derivation of error
+    float error = setpoint - input; 
     float output = Kp * error;
-//			+ Ki * (*integral) + Kd * derivative; // Tính giá tr? d?u ra c?a hàm di?u khi?n
 
     // Luu tr? sai s? và tích phân
 	
-		if (output > 100)
-        output = 100;
-    else if (output < - 100)
+		if (output < -100)
         output = -100;
+    else if (output > 0)
+        output = 0;
 		
     return output;
 }
 
 // dieu khien dong co dua tren pid
-//void dc_motor_control(float setpoint, float input)
-//{
-//	if (mode == AUTO)
-//	{
-//		output = pid_controller(setpoint, input, &prev_error, &integral);
-//			
-//			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-//		if (output <0)
-//		{
-//			pwmValueCCW = (uint16_t)(-output *0.1* 8500);
-//			pwmValueCW = 0;
-//		}
-//		else if (output>0)
-//		{
-//			pwmValueCW = (uint16_t)(output *0.1* 8500);
-//			pwmValueCCW = 0;
-//		}
-//		else
-//		{
-//			pwmValueCCW = 0;
-//			pwmValueCW = 0;
-//		}
-//		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-//		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-//	}
-//}
+void dc_motor_control(float setpoint, float input)
+{
+	if (mode == AUTO)
+	{
+		output = pid_controller(setpoint, input);
+			
+			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+		if (output <= 100)
+		{
+			pwm_value = (uint16_t)(-output *0.1* 8500);
+			
+		}
+		
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+	}
+}
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin==GPIO_PIN_1)
