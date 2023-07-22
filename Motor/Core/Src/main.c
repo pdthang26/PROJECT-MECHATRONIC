@@ -127,6 +127,7 @@ float pid_controller(float setpoint, float input, float dt);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 uint32_t convert8byteToInt(uint8_t *arr); 
+uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -686,6 +687,22 @@ uint32_t convert8byteToInt(uint8_t *arr)
 	return result;
 }
 
+
+uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin )
+{
+	if(inValue > inMax) 
+	{
+		return outMax;
+	}
+	else if (inValue < inMin)
+	{
+		return outMin;
+	}
+	else
+	{
+		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
+	}
+}
 /* USER CODE END 4 */
 
 /**

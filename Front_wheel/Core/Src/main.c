@@ -82,7 +82,7 @@ int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 200; // pulse per revolution
+const float pulsesPerRevolution = 400; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -93,17 +93,17 @@ int count=-1;
 
 
 //PID 
-<<<<<<< HEAD
-float Kp = 0.8;
-float Ki = 0;
-float Kd = 2;
-float Ts = 0.01; // 10ms
-float prev_error = 0.0;
-float integral = 0.0;
-=======
+//<<<<<<< HEAD
+//float Kp = 0.8;
+//float Ki = 0;
+//float Kd = 2;
+//float Ts = 0.01; // 10ms
+//float prev_error = 0.0;
+//float integral = 0.0;
+//=======
 float Kp = 0.98;
 float Ts = 0.01; // 10ms
->>>>>>> c45a8b2ef0e5a075e754175721ced617aae7cd74
+//>>>>>>> c45a8b2ef0e5a075e754175721ced617aae7cd74
 float input, output;
 
 
@@ -230,9 +230,9 @@ int main(void)
 					changeMode=mode;
 				}
 				aileValue = (float) RxDataAile[7];
-				setpoint=0.01*aileValue*10000;
-				sprintf(lcdRPM,"controll:%.1f",aileValue);
-				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+				setpoint=0.01*aileValue*19000;
+				sprintf(lcdRPM,"controll:%.1f ",aileValue);
+				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -251,8 +251,8 @@ int main(void)
 				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-				sprintf(lcdRPM,"ADC:%.2f",adcValue*100);
-				sprintf(lcdEncoderValue,"encoder:%d",encoderValue);
+				sprintf(lcdRPM,"ADC:%.2f ",adcValue*100);
+				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
 //				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
