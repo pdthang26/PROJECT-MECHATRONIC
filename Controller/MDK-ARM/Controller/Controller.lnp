@@ -1,5 +1,7 @@
 --cpu Cortex-M3
 "controller\startup_stm32f103xb.o"
+"controller\clcd_i2c.o"
+"controller\gps.o"
 "controller\main.o"
 "controller\stm32f1xx_it.o"
 "controller\stm32f1xx_hal_msp.o"
@@ -15,8 +17,10 @@
 "controller\stm32f1xx_hal_flash.o"
 "controller\stm32f1xx_hal_flash_ex.o"
 "controller\stm32f1xx_hal_exti.o"
+"controller\stm32f1xx_hal_i2c.o"
 "controller\stm32f1xx_hal_tim.o"
 "controller\stm32f1xx_hal_tim_ex.o"
+"controller\stm32f1xx_hal_uart.o"
 "controller\system_stm32f1xx.o"
 --strict --scatter "Controller\Controller.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
