@@ -4,7 +4,8 @@
  *  Created on: Nov 15, 2019
  *      Author: Bulanov Konstantin
  */
-
+#include "stm32f1xx_hal.h"
+#include <stdint.h>
 #define GPS_DEBUG	0
 #define	GPS_USART	&huart1
 #define GPSBUFSIZE  128       // GPS buffer size
@@ -45,6 +46,13 @@ typedef struct{
     float speed_km; // speek km/hr
     char speed_km_unit;
 } GPS_t;
+
+typedef struct
+{
+	UART_HandleTypeDef* UART;
+
+}GPS_Name;
+
 
 #if (GPS_DEBUG == 1)
 void GPS_print(char *data);

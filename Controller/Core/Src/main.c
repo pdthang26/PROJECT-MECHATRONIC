@@ -19,9 +19,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* Private includes ----------------------------------------------------------*/
+/* Private includes ---------------------8-------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "gps.h"
+#include "CLCD_I2C.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +50,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim2;
 
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 // controller variable
@@ -129,6 +132,13 @@ int main(void)
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
+	
+	CLCD_I2C_Name LCD1;
+	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
+	
+	GPS_Name GPS1;
+	GPS_Init(&GPS1,&huart1);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */

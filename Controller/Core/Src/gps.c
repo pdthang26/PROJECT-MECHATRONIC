@@ -27,13 +27,13 @@
  * | You should have received a copy of the GNU General Public License
  * | along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * |---------------------------------------------------------------------------------
+ - Khoi tao bien LCD: GPS_Name GPS1; 
+	- Khoi tao LCD do: GPS_Init(&GPS1,&huart1);
  */
 
 
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-#include "stm32f1xx_hal.h"
 #include "gps.h"
 
 
@@ -44,7 +44,6 @@
 uint8_t rx_data = 0;
 uint8_t rx_buffer[GPSBUFSIZE];
 uint8_t rx_index = 0;
-UART_HandleTypeDef huart1;
 GPS_t GPS;
 
 #if (GPS_DEBUG == 1)
@@ -55,13 +54,14 @@ void GPS_print(char *data){
 }
 #endif
 
-void GPS_Init()
+void GPS_Init(GPS_Name* GPS1,UART_HandleTypeDef* huart_gps)
 {
-	HAL_UART_Receive_IT(&huart1, &rx_data, 1);
+	GPS1->UART = huart_gps;
+	HAL_UART_Receive_IT(GPS1->UART, &rx_data, 1);
 }
 
 
-void GPS_UART_CallBack(){
+void GPS_UART_CallBack(GPS_Name* GPS1){
 	if (rx_data != '\n' && rx_index < sizeof(rx_buffer)) {
 		rx_buffer[rx_index++] = rx_data;
 	} else {
@@ -75,7 +75,7 @@ void GPS_UART_CallBack(){
 		rx_index = 0;
 		memset(rx_buffer, 0, sizeof(rx_buffer));
 	}
-	HAL_UART_Receive_IT(GPS_USART, &rx_data, 1);
+	HAL_UART_Receive_IT(GPS1->UART, &rx_data, 1);
 }
 
 
