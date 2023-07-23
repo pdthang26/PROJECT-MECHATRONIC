@@ -19,7 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* Private includes ---------------------8-------------------------------------*/
+/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "gps.h"
@@ -56,6 +56,13 @@ UART_HandleTypeDef huart1;
 // controller variable
 uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
 uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+char kinhdo[16];
+char vido[16];
+GPS_t GPS_NEO;
+
+GPS_Name GPS1;
+CLCD_I2C_Name LCD1;
+
 
 // CAN protocol variable
 CAN_HandleTypeDef     CanHandle;
@@ -82,6 +89,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
 uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -132,11 +141,10 @@ int main(void)
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
-	
-	CLCD_I2C_Name LCD1;
+
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
 	
-	GPS_Name GPS1;
+	
 	GPS_Init(&GPS1,&huart1);
 	
   /* USER CODE END 2 */
@@ -164,6 +172,16 @@ int main(void)
 		
 		lastPulseWidthThro = pulseWidthThro;
 		lastPulseWidthAile = pulseWidthAile;
+		
+		GPS_Init(&GPS1,&huart1);
+		sprintf(kinhdo,"Long:%.6f",GPS_NEO.dec_longitude);
+		CLCD_I2C_SetCursor(&LCD1, 0,0);
+		CLCD_I2C_WriteString(&LCD1,kinhdo);
+		
+		sprintf(vido,"Lat:%.6f",GPS_NEO.dec_latitude);
+		CLCD_I2C_SetCursor(&LCD1, 0,1);
+		CLCD_I2C_WriteString(&LCD1,vido);
+	
 	}
   /* USER CODE END 3 */
 }
@@ -493,7 +511,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	}
 }
 
-
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance == USART1) GPS_UART_CallBack(&GPS1,&GPS_NEO);
+}
 /* USER CODE END 4 */
 
 /**
