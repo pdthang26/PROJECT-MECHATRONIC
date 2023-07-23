@@ -33,6 +33,7 @@
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
+#define BRAKE 							0X222
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -87,9 +88,10 @@ float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
 int count=-1;
+float revolutions;
 
 // Variable PID
-float Kp = 2;
+float Kp = 1.5;
 float Ki = 0;
 float Kd = 0;
 float integral = 0.0;
@@ -103,9 +105,8 @@ double Output, LastOutput;
 
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
-float setpoint = 0;
 float test = 0;
-
+float setSpeed = 0.0;    // expected speed (m/s)
 
 
 
@@ -127,7 +128,8 @@ float pid_controller(float setpoint, float input, float dt);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 uint32_t convert8byteToInt(uint8_t *arr); 
-uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
+float map(float inValue, float inMax, float inMin,float outMax, float outMin );
+uint16_t pwm_generation(float speed);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -190,6 +192,7 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -200,17 +203,21 @@ while (1)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		setSpeed = map(throValue,100,30,133,0);
 		adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 		throValue = (float)RxDataThro[7];
 		sprintf(lcdRPM,"ADC:%.1f %d ",throValue, pwm_value);
-		sprintf(lcdEncoderValue,"encoder:%.2f  ",rpm);
+		sprintf(lcdEncoderValue,"encoder:%.2f",mps);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,lcdRPM);
 		
-		pwm_value = (uint16_t)(throValue*0.01 * 65535);
-    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+		
+//		pwm_value = pwm_generation(setSpeed);
+//    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+		
+		dc_motor_control(setSpeed,rpm);
 		
   }
   /* USER CODE END 3 */
@@ -600,41 +607,53 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) // check if timer 2 overflowed
 			{
 				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE); // clear overflow flag
-				if (direction == 1) count++; // increment count if car is moving forward
-				else count--; // decrement count if car is moving backward
+				if (direction == 1)  // increment count if car is moving forward
+				{
+					count++;
+				}
+				else 
+				{
+					count--;
+				}
 			}
 			encoderValue = encoderGet + (count*65535);
-			float revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+			if (direction == 1)  // increment count if car is moving forward
+				{
+					revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+				}
+				else 
+				{
+					revolutions = -(encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+				}
+			revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
 			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			last_encoderValue = encoderValue;
-//			dc_motor_control(setpoint, rpm);
-			
+			last_encoderValue = encoderValue;		
     }
 }
 
 // tính toán PID
 float pid_controller(float setpoint, float input, float dt)
 {
-//    float error = setpoint - input;
-//    integral += error * dt;
-//    derivative = (error - last_error) / dt;
-//    output = Kp * error + Ki * integral + Kd * derivative;
-//    last_error = error;
-//    return output;
 	float E = setpoint - input;
 	alpha = 2 *sampleTime*Kp + Ki* sampleTime * sampleTime + 2*Kd;
   beta = sampleTime * sampleTime * Ki - 4 * Kd - 2 * sampleTime * Kp;
   gamma = 2 * Kd;
-  Output = (alpha * E + beta * E1 + gamma * E2 + 2 * sampleTime * LastOutput) / (2 * sampleTime);
+  //Output = (alpha * E + beta * E1 + gamma * E2 + 2 * sampleTime * LastOutput) / (2 * sampleTime);
+	Output = Kp*E;
   LastOutput = Output;
-  //Serial.println(int(tocdo));
   E2 = E1;
   E1 = E;
 	return Output;
 }
+
+//uint16_t pwm_generation (float speed){
+//	uint16_t pwm;
+// pwm = -611.82* pow(speed,2)+8859.2*speed+28633;
+// return pwm;
+//}
 
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
@@ -646,7 +665,7 @@ void dc_motor_control(float setpoint, float input)
     else if (output < 0.0)
         output = 0.0;
     // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-    pwm_value = (uint16_t)(output*0.01 * 65535);
+    pwm_value = output*0.01*65535;
     __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
 }
 
@@ -688,7 +707,7 @@ uint32_t convert8byteToInt(uint8_t *arr)
 }
 
 
-uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin )
+float map(float inValue, float inMax, float inMin,float outMax, float outMin )
 {
 	if(inValue > inMax) 
 	{
