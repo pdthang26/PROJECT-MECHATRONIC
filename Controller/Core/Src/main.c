@@ -158,7 +158,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 		pulseWidthThro = pulseIn(GPIO_PIN_1,1,100);
 		pulseWidthAile = pulseIn(GPIO_PIN_0,1,100);
-		
+		GPS_Init(&GPS1,&huart1);
 		if(lastPulseWidthThro != pulseWidthThro)
 		{
 			TxThro[7] = (uint8_t)pulseWidthThro;
@@ -173,7 +173,7 @@ int main(void)
 		lastPulseWidthThro = pulseWidthThro;
 		lastPulseWidthAile = pulseWidthAile;
 		
-		GPS_Init(&GPS1,&huart1);
+		
 		sprintf(kinhdo,"Long:%.6f",GPS_NEO.dec_longitude);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);

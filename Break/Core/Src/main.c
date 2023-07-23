@@ -45,6 +45,7 @@
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
+#define BREAK      				0x222
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -66,6 +67,8 @@ TIM_HandleTypeDef htim3;
 // IMU variable 
 MPU6050_t 				Data;
 
+
+
 // I2C of LCD 16x2
 CLCD_I2C_Name LCD1;
 float adcValue;
@@ -83,8 +86,10 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
-uint8_t               RxDataAile[8];
+uint8_t               RxDataBreak[8];
 uint32_t              TxMailbox;
+
+
 
 //PID 
 float Kp = 350;
@@ -201,59 +206,46 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
 				break;
 			case AUTO:
-				if(changeMode!=mode){
-					
+				if(changeMode!=mode_1){
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
 					setpoint = 0;
 					HAL_Delay(2000);
-					changeMode=mode;
+					changeMode=mode_1;
+					
 				}
+				pwm_value=RxDataBreak[7]*0.01*12000;
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 				break;
 			case MANUAL:
-				if(changeMode!=mode){
+				if(changeMode!=mode_1){
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
-					changeMode=mode;
+					changeMode=mode_1;
 					HAL_Delay(2000);
+					CLCD_I2C_Clear(&LCD1);
 				}
-				CLCD_I2C_Clear(&LCD1);
+				
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-				sprintf(lcdADC,"ADC:%.2f",adcValue*100);
+				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.Ax,Data.Az);
+				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdADC);
-				if (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0){
-					
-				  pwm_value = (uint16_t)(65535 * adcValue);
-
-				}
+				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+				if (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0)
+					{
+						pwm_value = (uint16_t)(30000 * adcValue);
+					}
+				else pwm_value=0;
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 				break;
 				
 		}
 		
-		switch (mode)
-		{
-			case ACCELERATION:
-				sprintf(lcdAcelX,"X:%.3f Z:%.3f ",Data.Ax,Data.Az);
-				sprintf(lcdAcelY,"Y:%.3f       ",Data.Ay);
-				break;
-			case GYROSCOPE:
-				sprintf(lcdAcelX,"X:%.3f Z:%.3f ",Data.Gx,Data.Gz);
-				sprintf(lcdAcelY,"Y:%.3f       ",Data.Gy);
-				break;
-			case ANGLE:
-				sprintf(lcdAcelX,"X:%.3f         ",Data.KalmanAngleX);
-				sprintf(lcdAcelY,"Y:%.3f  ",Data.KalmanAngleY);
-				break;
-		}
-		CLCD_I2C_SetCursor(&LCD1, 0,0);
-		CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-		CLCD_I2C_SetCursor(&LCD1, 0,1);
-		CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-}
+	}
 		
   /* USER CODE END 3 */
 }
@@ -690,10 +682,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==SLAVE_ID2)
+		if(RxHeader.StdId==BREAK)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			RxDataAile[7]=RxData[7];
+			RxDataBreak[7]=RxData[7];
 		}
 	}
 	
