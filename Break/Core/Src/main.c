@@ -215,7 +215,7 @@ int main(void)
 					changeMode=mode_1;
 					
 				}
-				pwm_value=RxDataBreak[7]*0.01*12000;
+				pwm_value=RxDataBreak[7]*0.01*20000;
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 				break;
 			case MANUAL:
