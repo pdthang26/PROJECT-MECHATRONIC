@@ -33,7 +33,7 @@
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
-#define BRAKE 							0X222
+#define BRAKE 							0x222
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -192,7 +192,7 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
-	
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -203,7 +203,7 @@ while (1)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		setSpeed = map(throValue,100,30,133,0);
+		setSpeed = map(throValue,100,30,200,0);
 		adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 		throValue = (float)RxDataThro[7];
 		sprintf(lcdRPM,"ADC:%.1f %d ",throValue, pwm_value);
@@ -621,11 +621,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				{
 					revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
 				}
-				else 
+			else if(direction == -1)
 				{
 					revolutions = -(encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
 				}
-			revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
 			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
@@ -646,6 +645,10 @@ float pid_controller(float setpoint, float input, float dt)
   LastOutput = Output;
   E2 = E1;
   E1 = E;
+	if (Output > 100.0)
+			Output = 100.0;
+	else if (Output < -100.0)
+			output = -100.0;
 	return Output;
 }
 
@@ -660,13 +663,21 @@ void dc_motor_control(float setpoint, float input)
 {
     output = pid_controller(setpoint, input, sampleTime);
     // gioi han gia tri pwm trong khoang 0 den 1
-    if (output > 100.0)
-        output = 100.0;
-    else if (output < 0.0)
-        output = 0.0;
-    // tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
-    pwm_value = output*0.01*65535;
-    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+    if (output > 0.0)
+		{
+			pwm_value = output*0.01*65535;
+			TxData[7] = 0;
+			WriteCAN(BRAKE,TxData);
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+		}
+    else if (output <=0.0)
+		{
+			TxData[7] = -output;
+			WriteCAN(BRAKE,TxData);
+			pwm_value = 0;
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
+		}
+    
 }
 
 void WriteCAN(uint16_t ID,uint8_t *data)

@@ -45,7 +45,7 @@
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
-#define BREAK      				0x222
+#define BREAK      					0x222
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -98,9 +98,10 @@ float input, output;
 
 // Khai bao bien cho PWM
 uint16_t pwm_value = 0;
-//uint16_t pwmValueCW = 0;
-//uint16_t pwmValueCCW = 0;
+uint16_t pwmValueCW = 0;
+uint16_t pwmValueCCW = 0;
 float setpoint = 0;
+uint8_t btnState;
 
 
 
@@ -213,7 +214,6 @@ int main(void)
 					setpoint = 0;
 					HAL_Delay(2000);
 					changeMode=mode_1;
-					
 				}
 				pwm_value=RxDataBreak[7]*0.01*20000;
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
@@ -227,7 +227,7 @@ int main(void)
 					HAL_Delay(2000);
 					CLCD_I2C_Clear(&LCD1);
 				}
-				
+				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.Ax,Data.Az);
 				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
@@ -235,12 +235,24 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-				if (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)==0)
-					{
-						pwm_value = (uint16_t)(30000 * adcValue);
-					}
-				else pwm_value=0;
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+				if((btnState&0x01) ==0)
+				{
+					pwmValueCW = (uint16_t)(65535 * adcValue);
+					pwmValueCCW = 0;
+					
+				}
+				else if((btnState>>1&0x01) ==0)
+				{				
+					pwmValueCW = 0;
+					pwmValueCCW = (uint16_t)(65535 * adcValue);
+				}
+				else 
+				{
+					pwmValueCW = 0;
+					pwmValueCCW = 0;
+				}
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 				break;
 				
 		}
@@ -659,7 +671,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	else if (GPIO_Pin==GPIO_PIN_5)
 	{		
 		MPU6050_Read_All(&hi2c1, &Data);
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	}
 }
 
