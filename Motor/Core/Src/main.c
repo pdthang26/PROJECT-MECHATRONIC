@@ -34,6 +34,7 @@
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
 #define BRAKE 							0x222
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -61,8 +62,9 @@ TIM_HandleTypeDef htim4;
 CLCD_I2C_Name LCD1;
 float adcValue;
 float throValue;
-char lcdRPM[16];
-char lcdEncoderValue[16];
+char row1[16];
+char row2[16];
+
 
 
 
@@ -108,7 +110,7 @@ uint16_t pwm_value = 0;
 float test = 0;
 float setSpeed = 0.0;    // expected speed (m/s)
 
-
+uint8_t btnState;
 
 /* USER CODE END PV */
 
@@ -144,7 +146,7 @@ uint16_t pwm_generation(float speed);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -203,21 +205,46 @@ while (1)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		setSpeed = map(throValue,100,30,200,0);
-		adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-		throValue = (float)RxDataThro[7];
-		sprintf(lcdRPM,"ADC:%.1f %d ",throValue, pwm_value);
-		sprintf(lcdEncoderValue,"encoder:%.2f",mps);
+		btnState = HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)<<3|HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)<<2
+							|HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_0)<<1|HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1);
+		if((btnState>>3&0x01) == 0)
+		{
+			throValue = (float)RxDataThro[7];
+			setSpeed = map(throValue,100,30,200,0);
+			dc_motor_control(setSpeed,rpm);
+		}
+		else if((btnState>>2&0x01) == 0)
+		{				
+			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+			pwm_value = adcValue*65535;
+			sprintf(row1,"ADC:%.1f %d ",adcValue, pwm_value);
+			sprintf(row2,"encoder:%.2f",mps);
+			
+			if((btnState>>1&0x01) == 0)
+			{
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,1);
+			}
+			else if((btnState&0x01) == 0)
+			{
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
+			}
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+		}
+		
+		
+		
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
-		CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
+		CLCD_I2C_WriteString(&LCD1,row1);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
-		CLCD_I2C_WriteString(&LCD1,lcdRPM);
+		CLCD_I2C_WriteString(&LCD1,row2);
 		
 		
 //		pwm_value = pwm_generation(setSpeed);
-//    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+    
 		
-		dc_motor_control(setSpeed,rpm);
+//		
 		
   }
   /* USER CODE END 3 */
@@ -581,19 +608,24 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  /*Configure GPIO pins : PA2 PA3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA3 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  /*Configure GPIO pins : PA5 PA6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB0 PB1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
