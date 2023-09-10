@@ -55,8 +55,23 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 // controller variable
-uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
-uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+//uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
+//uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+uint8_t count;
+uint8_t buffer;
+uint8_t dataBuff[6];
+
+struct data
+{
+	char Dir;
+	uint16_t val;
+};
+
+struct data dataBackWheel;
+struct data dataFrontWheel;
+struct data dataBreak;
+
+
 char kinhdo[16];
 char vido[16];
 GPS_t GPS_NEO;
@@ -92,6 +107,9 @@ void assignUint32_tChar8byte(uint32_t value, char* buffer);
 uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+void clearBuffer (uint8_t *buff);
+void updateData (uint8_t checkType,uint8_t *data);
+void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index);
 
 /* USER CODE END PFP */
 
@@ -149,7 +167,7 @@ int main(void)
 	
 	
 	GPS_Init(&GPS1,&huart1);
-	
+	HAL_UART_Receive_IT(&huart3, &buffer, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -159,22 +177,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		pulseWidthThro = pulseIn(GPIO_PIN_1,1,100);
-		pulseWidthAile = pulseIn(GPIO_PIN_0,1,100);
-		GPS_Init(&GPS1,&huart1);
-		if(lastPulseWidthThro != pulseWidthThro)
-		{
-			TxThro[7] = (uint8_t)pulseWidthThro;
-			WriteCAN(SLAVE_ID1,TxThro );
-		}
-		if(lastPulseWidthAile != pulseWidthAile)
-		{
-			TxAile[7] = (uint8_t)pulseWidthAile;
-			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
-		}
+//		pulseWidthThro = pulseIn(GPIO_PIN_1,1,100);
+//		pulseWidthAile = pulseIn(GPIO_PIN_0,1,100);
+//		GPS_Init(&GPS1,&huart1);
+//		if(lastPulseWidthThro != pulseWidthThro)
+//		{
+//			TxThro[7] = (uint8_t)pulseWidthThro;
+//			WriteCAN(SLAVE_ID1,TxThro );
+//		}
+//		if(lastPulseWidthAile != pulseWidthAile)
+//		{
+//			TxAile[7] = (uint8_t)pulseWidthAile;
+//			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
+//		}
+//		
+//		lastPulseWidthThro = pulseWidthThro;
+//		lastPulseWidthAile = pulseWidthAile;
 		
-		lastPulseWidthThro = pulseWidthThro;
-		lastPulseWidthAile = pulseWidthAile;
+		
+		
 		
 		
 		sprintf(kinhdo,"Long:%.6f",GPS_NEO.dec_longitude);
@@ -555,8 +576,67 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	
 	if(huart->Instance == USART1) GPS_UART_CallBack(&GPS1,&GPS_NEO);
+	if(huart->Instance == USART3) 
+	{
+		if (buffer != 10)
+		{
+			dataBuff[count] = buffer;
+			count++;
+		}
+		else if (buffer == 10)
+		{
+			updateData (dataBuff[0], dataBuff);
+			clearBuffer(dataBuff);
+		}
+		HAL_UART_Receive_IT(&huart3, &buffer, 1);
+		
+	}
 }
+
+void clearBuffer (uint8_t *buff)
+{
+	for(int i=0;i>6;i++)
+  {
+		buff[i]= 0;
+  }
+	count=0;
+}
+void updateData (uint8_t checkType, uint8_t *data)
+{
+	switch (checkType)
+  {
+  	case 'B':
+			dataBackWheel.Dir = dataBuff[1];
+			CharToNum (dataBackWheel.val, dataBuff, 2);
+  		break;
+		case 'F':
+			CharToNum (dataFrontWheel.val, dataBuff, 2);
+  		break;
+		case 'P':
+			CharToNum (dataBreak.val, dataBuff, 2);
+  		break;
+  }
+
+}
+
+void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index)
+{
+	for (uint8_t i=Index;i<6; i++)
+	{
+		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
+			{
+				if(i==Index)
+					SaveNum =(DataIn[i]-48);
+				else if (i>Index) 
+					SaveNum = SaveNum*10 + (DataIn[i]-48);
+			}	
+	}	
+			
+		
+}
+
 /* USER CODE END 4 */
 
 /**
