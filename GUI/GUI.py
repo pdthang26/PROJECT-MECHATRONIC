@@ -236,7 +236,7 @@ def forward(event):
     if btn_forward['state'] != 'disabled':
         if event.type == '4':  # ButtonPress event
             # Mở ảnh khi nút được nhấn
-            forward_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/2.png')
+            forward_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/2.png')
             #truyền UART cho bánh sau
             if uart.is_open:
                 start_bit = 'B'
@@ -247,7 +247,7 @@ def forward(event):
                 messagebox.showwarning('Warning','Please connect the UART')
         else:
             # Mở ảnh mặc định khi nút được thả ra
-            forward_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/1.png')
+            forward_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/1.png')
             # truyền UART cho bánh sau
             if uart.is_open:
                 start_bit = 'B'
@@ -259,7 +259,7 @@ def forward(event):
     btn_forward['image'] = forward_btn
 
 # Mở ảnh 
-forward_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/1.png')
+forward_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/1.png')
 
 # Tạo nút forward
 btn_forward = tk.Button(back_frame, image=forward_btn, borderwidth=0, state='disabled', bg='#A8DF8E')
@@ -279,7 +279,7 @@ def reverse(event):
     if btn_reverse['state']!='disabled': # check trạng thái của nút
         if event.type == '4':  # ButtonPress event
             # Mở ảnh khi nút được nhấn
-            reverse_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/4.png')
+            reverse_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/4.png')
             #truyền UART giá trị tốc độ cho bánh sau
             if uart.is_open:
                 start_bit = 'B'
@@ -290,7 +290,7 @@ def reverse(event):
                 messagebox.showwarning('Warning','Please connect the UART')
         else:
             # Mở ảnh mặc định khi nút được thả ra
-            reverse_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/3.png')
+            reverse_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/3.png')
             #truyền UART giá trị tốc độ cho bánh sau
             if uart.is_open:
                 start_bit = 'B'
@@ -302,7 +302,7 @@ def reverse(event):
     btn_reverse['image']= reverse_btn
 
 # Mở ảnh
-reverse_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/3.png')
+reverse_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/3.png')
 
 # Tạo nút Reverse
 btn_reverse = Button(back_frame, image=reverse_btn, bg='#A8DF8E', borderwidth=0, state='disabled')
@@ -354,7 +354,7 @@ def brake(event):
     if btn_brake['state']!='disabled':
         if event.type == '4':  # ButtonPress event
             # Mở ảnh khi nút được nhấn
-            brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_2.png')
+            brake_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/b_2.png')
             # truyền uart cho adc cho phanh
             if uart.is_open:
                 start_bit = 'P'
@@ -362,7 +362,7 @@ def brake(event):
                 uart.write(bytearray([ord(start_bit),brake_adc,ord(stop_bit)]))
         else:
             # Mở ảnh mặc định khi nút được thả ra
-            brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_1.png')
+            brake_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/b_1.png')
             # truyền uart cho adc cho phanh
             if uart.is_open:
                 start_bit = 'P'
@@ -372,7 +372,7 @@ def brake(event):
     btn_brake['image']= brake_btn
 
 # Mở ảnh
-brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_1.png')
+brake_btn = PhotoImage(file='D:\PROJECT-MECHATRONIC/GUI/b_1.png')
 
 # Tạo nút Brake
 btn_brake = Button(brake_frame, image=brake_btn, bg='#A8DF8E', borderwidth=0, state='disabled')
