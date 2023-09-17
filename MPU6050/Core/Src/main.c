@@ -63,7 +63,7 @@ TIM_HandleTypeDef htim1;
 /* USER CODE BEGIN PV */
 // IMU variable 
 MPU6050_t 				Data;
-
+uint8_t oneOnly = 1;
 
 
 // I2C of LCD 16x2
@@ -422,16 +422,16 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-
-
-
-
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 
 	if (GPIO_Pin==GPIO_PIN_5)
 	{		
+		if(oneOnly != 0 )
+		{
+			MPU6050_Calculation_offset_Gryo(&hi2c1, &Data);
+			oneOnly  = 0;
+		}
 		MPU6050_Read_All(&hi2c1, &Data);
 	}
 }

@@ -31,10 +31,14 @@ typedef struct
     double Gy;
     double Gz;
 
+		double gyroZoffset;
+		
     float Temperature;
 
     double KalmanAngleX;
     double KalmanAngleY;
+		double AngleZ;
+		
 } MPU6050_t;
 
 // Kalman structure
@@ -49,6 +53,8 @@ typedef struct
 } Kalman_t;
 
 uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx);
+
+void MPU6050_Calculation_offset_Gryo(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
 
 void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
 

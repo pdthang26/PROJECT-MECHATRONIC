@@ -50,7 +50,9 @@
 // Setup MPU6050
 #define MPU6050_ADDR 0xD0
 const uint16_t i2c_timeout = 100;
-const double Accel_Z_corrector = 14418.0;
+const double Accel_X_corrector = 16348.0;
+const double Accel_Y_corrector = 16348.0;
+const double Accel_Z_corrector = 16348.0;
 uint16_t time = 0;
 uint16_t lastTime = 0;
 double dt;
@@ -109,6 +111,22 @@ uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx)
     return 1;
 }
 
+void MPU6050_Calculation_offset_Gryo(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
+{
+	uint8_t Rec_Data[2];
+	uint16_t regGryoZ;
+	double z;
+	// Read 6 BYTES of data starting from GYRO_XOUT_H register
+	for(int i=0;i<3000;i++)
+  {
+		HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, 0x47, 1, Rec_Data, 2, i2c_timeout);
+		regGryoZ = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
+
+		z += (double)regGryoZ / 131.0;
+	}
+	DataStruct->gyroZoffset = z/3000;
+}
+
 void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
 {
     uint8_t Rec_Data[6];
@@ -126,8 +144,8 @@ void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
          I have configured FS_SEL = 0. So I am dividing by 16384.0
          for more details check ACCEL_CONFIG Register              ****/
 
-    DataStruct->Ax = DataStruct->Accel_X_RAW / 16384.0;
-    DataStruct->Ay = DataStruct->Accel_Y_RAW / 16384.0;
+    DataStruct->Ax = DataStruct->Accel_X_RAW / Accel_X_corrector;
+    DataStruct->Ay = DataStruct->Accel_Y_RAW / Accel_Y_corrector;
     DataStruct->Az = DataStruct->Accel_Z_RAW / Accel_Z_corrector;
 }
 
@@ -183,8 +201,8 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     DataStruct->Gyro_Y_RAW = (int16_t)(Rec_Data[10] << 8 | Rec_Data[11]);
     DataStruct->Gyro_Z_RAW = (int16_t)(Rec_Data[12] << 8 | Rec_Data[13]);
 
-    DataStruct->Ax = DataStruct->Accel_X_RAW / 16384.0;
-    DataStruct->Ay = DataStruct->Accel_Y_RAW / 16384.0;
+    DataStruct->Ax = DataStruct->Accel_X_RAW / Accel_X_corrector;
+    DataStruct->Ay = DataStruct->Accel_Y_RAW / Accel_Y_corrector;
     DataStruct->Az = DataStruct->Accel_Z_RAW / Accel_Z_corrector;
     DataStruct->Temperature = (float)((int16_t)temp / (float)340.0 + (float)36.53);
     DataStruct->Gx = DataStruct->Gyro_X_RAW / 131.0;
@@ -221,9 +239,12 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     {
         DataStruct->KalmanAngleY = Kalman_getAngle(&KalmanY, pitch, DataStruct->Gy, dt);
     }
-    if (fabs(DataStruct->KalmanAngleY) > 90)
-        DataStruct->Gx = -DataStruct->Gx;
+    if (fabs(DataStruct->KalmanAngleY) > 90) DataStruct->Gx = -DataStruct->Gx;
     DataStruct->KalmanAngleX = Kalman_getAngle(&KalmanX, roll, DataStruct->Gx, dt);
+		
+		double gyroZ = DataStruct->Gz;
+		gyroZ -= DataStruct->gyroZoffset;
+		DataStruct->AngleZ += gyroZ*dt;
 }
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)
