@@ -140,7 +140,7 @@ def connect_uart():
     canvas = tk.Canvas(popup, width=100, height=100,bd=0)
     canvas.place(x=1,y=1)
 
-    image = Image.open("D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/successful.png")
+    image = Image.open("D:\PROJECT-MECHATRONIC/GUI/successful.png")
     image = image.resize((50, 50), Image.ANTIALIAS)
     photo = ImageTk.PhotoImage(image)
 
