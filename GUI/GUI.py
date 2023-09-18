@@ -10,16 +10,16 @@ from math import *
 '''Tạo các biến cần thiết cho chương trình'''
 
 # Tạo mảng bao gồm các thành phần trên giao diện
-objects_0 = []
-objects_1 = []
-objects_2 = []
-objects_3 = []
+objects_0 = [] # mảng cho nút để active các elements trong open và disable tất cả trong close
+objects_1 = [] # mảng chứa các thành phần để active bằn nút manual
+objects_2 = [] # mảng chứa các elements để active bằng nút Connect
+objects_3 = [] # các element combobox về UART parameter
 
 # Bit kết thúc
 stop_bit = '\n'
 
 # Các biến dùng truyền UART
-b_uart=f_uart=p_uart =angle_uart=gps_uart= None
+b_uart=f_uart=p_uart=angle_uart=velocity_uart= None
 
 ''' Chức năng giao diện '''
 
@@ -29,7 +29,7 @@ def connect_uart():
     for obj in objects_2:
         obj['state'] = 'normal'
 
-    global b_uart,f_uart,p_uart,angle_uart,gps_uart
+    global b_uart,f_uart,p_uart,angle_uart,velocity_uart
 
     selected_port = com_port.get()
     selected_gps = gps_port.get()
@@ -58,70 +58,13 @@ def connect_uart():
     data_bit_value = switch_case_2(select_data)
 
     # Tạo kết nối UART với các biến bánh trước, bánh sau, phanh
-    b_uart = f_uart = p_uart= angle_uart = serial.Serial(
+    b_uart = f_uart = p_uart= angle_uart = velocity_uart= serial.Serial(
         port=selected_port,
         baudrate=selected_rate,
         stopbits=stop_bit_value,
         bytesize=data_bit_value,
         timeout=1  # Timeout cho phép đọc từ giao diện UART
     )
-
-    # # Tạo kết nối UART với biến GPS
-    # gps_uart = serial.Serial(
-    #     port = selected_gps,
-    #     baudrate=9600,
-    #     stopbits= stop_bit_value,
-    #     bytesize= data_bit_value,
-    #     timeout= 1
-    # )
-
-    # def read_gps_data():
-    #     # Đọc dữ liệu GPS từ UART
-    #     gps_data = gps_uart.readline().decode().strip()
-    #     # Xử lý dữ liệu từ UART
-    #     if gps_data.startswith('$GPRMC'):
-    #         data = gps_data.split(',')
-
-    #         # Kiểm tra xem dữ liệu có đủ trường thông tin và trạng thái là "Active" hay không
-    #         if len(data) >= 7 and data[2] == 'A':
-    #             latitude = float(data[3])  # Vĩ độ
-    #             longitude = float(data[5])  # Kinh độ
-
-    #             # Chuyển đổi đơn vị vĩ độ và kinh độ từ độ, phút sang độ thập phân
-    #             lat_degrees = math.floor(latitude / 100)
-    #             lat_minutes = latitude - (lat_degrees * 100)
-    #             latitude_decimal = lat_degrees + (lat_minutes / 60)
-
-    #             long_degrees = math.floor(longitude / 100)
-    #             long_minutes = longitude - (long_degrees * 100)
-    #             longitude_decimal = long_degrees + (long_minutes / 60)
-
-    #             # In ra giá trị vĩ độ và kinh độ
-    #             long_display['text'] = longitude_decimal
-    #             lat_display['text'] = latitude_decimal
-
-    #             # Lập lịch cho việc đọc dữ liệu tiếp theo sau 200ms
-    #             root.after(200, read_uart_data)
-
-    # # Lập lịch cho việc đọc dữ liệu UART sau 200ms
-    # root.after(200, read_uart_data)
-   
-    while True:
-        #Đọc dữ liệu từ UART 
-        motion = angle_uart.readline().decode().strip()
-
-        # Xử lý dữ liệu từ UART
-        if 'A' in motion and 'V' in motion:
-            # Tách chuỗi thành các phần riêng biệt dựa trên ký tự xuống dòng
-            angle_data, vel_data = motion.split('\n')
-                
-            # Xử lý dữ liệu góc
-            if angle_data.startswith('A'):
-                angle_display['text'] = angle_data[1:]
-                
-            # Xử lý dữ liệu vận tốc
-            if vel_data.startswith('V'):
-                vel_display['text'] = vel_data[1:]
 
     # tạo popup thông báo kết nối thành công 
     popup = tk.Toplevel()
@@ -154,20 +97,38 @@ def connect_uart():
     ok_button.place(x = 150, y = 70, width= 50, height= 30)
 
     popup.mainloop()
-   
+
+def show_click():
+
+    #Đọc dữ liệu uart
+    angle = angle_uart.readline().decode().strip() 
+    # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
+    velocity = velocity_uart.readline().decode().strip()
+
+    # Xử lý tính hiệu UART
+    if angle.startswith('A'):
+        angle_display['text']=angle[1:]
+    if velocity.startswith('V'):
+        vel_display['text']=velocity[1:]
+
 # Hàm cho nút Open
 def open_click():
     for obj in objects_0:
         obj['state'] = 'normal'
     
-
 # Hàm cho nút Close
 def close_click():
     for obj in objects_0+objects_1+objects_2:
         obj['state'] = 'disabled'
-    long_display['text'] = ''
-    lat_display['text'] = ''
-    com_port.set('')
+    for obj in objects_3:
+        obj.set('')
+    
+    #Ngắt UART
+    b_uart.close()
+    f_uart.close()
+    p_uart.close()
+    angle_uart.close()
+    velocity_uart.close()
 
 # Tạo cửa sổ giao diện
 root = tk.Tk()
@@ -181,10 +142,6 @@ root.resizable(height=False, width=False)
 com_label = tk.Label(root, text="COM Port:", bg='#A8DF8E')
 com_label.place(x=180, y=5)
 
-#Tạo nhãn cho ô chọn cổng COM GPS
-gps_label = tk.Label(root, text='GPS Port:',bg='#A8DF8E')
-gps_label.place(x=300,y= 5)
-
 # Tạo nhãn cho ô chọn Baudrate
 rate_label = tk.Label(root, text='Baud Rate', bg='#A8DF8E')
 rate_label.place(x=420, y=5)
@@ -196,6 +153,10 @@ data_label.place(x=180,y=65)
 #Tạo nhãn cho Stop Bit
 stop_label = tk.Label(root,text='Stop Bit',bg='#A8DF8E')
 stop_label.place(x=300,y=65)
+
+#Tạo nhãn cho Parity bit
+parity_label = tk.Label(root,text = 'Parity Bit',bg='#A8DF8E')
+parity_label.place(x=420,y=65)
 
 # Tạo nhãn cho di chuyển trước và sau
 back_wheel_label = tk.Label(root,text='Back Wheel Control',bg='#A8DF8E',font=('Arial',12,'bold'))
@@ -209,37 +170,21 @@ front_wheel_label.place(x=205, y=140)
 brake_label = tk.Label(root, text = 'Brake Control',bg='#A8DF8E',font=('Arial',12,'bold'))
 brake_label.place(x= 205, y= 265 )
 
-# Tạo nhãn cho Longitude
-long_label = tk.Label(root, text='Longitude', bg='#A8DF8E')
-long_label.place(x=800, y=5)
-
-# Tạo ô hiển thị cho Longitude
-long_display = tk.Label(root, relief=tk.SUNKEN,anchor=tk.W, padx=10,bg='white')
-long_display.place(x=800, y=30, height=30, width=230)
-
-# Tạo nhãn cho Latitude
-lat_label = tk.Label(root, text='Latitude', bg='#A8DF8E')
-lat_label.place(x=800, y=65)
-
-# Tạo ô hiển thị cho Latitude
-lat_display = tk.Label(root, relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-lat_display.place(x=800, y=90, height=30, width=230)
-
 # Tạo nhãn cho hiển thị Angle
 angle_label = tk.Label(root,text='Angle',bg='#A8DF8E')
-angle_label.place(x=550,y= 5)
+angle_label.place(x=540,y= 5)
 
 #Tạo ô hiển thị cho Angle
 angle_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-angle_display.place(x=550,y=30,height=30,width=100)
+angle_display.place(x=540,y=30,height=30,width=100)
 
 # Tạo nhãn cho Velocity
 vel_label = tk.Label(root,text='Velocity',bg='#A8DF8E')
-vel_label.place(x= 670,y=5 )
+vel_label.place(x= 660,y=5 )
 
 #Tạo ô hiển thị Velocity
 vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-vel_display.place(x=670,y=30,width=100,height=30)
+vel_display.place(x=660,y=30,width=100,height=30)
 
 # Lấy danh sách tất cả các cổng COM 
 com_ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -281,6 +226,12 @@ stop_port.place(x=300,y=90,height=30,width=100)
 objects_0.append(stop_port)
 objects_3.append(stop_port)
 
+#Tạo ô chọn Parity Bit 
+parity_port =ttk.Combobox(root,values=['even','odd','none'],state='disabled')
+parity_port.place(x=420,y=90,height=30,width=100)
+objects_0.append(parity_port)
+objects_3.append(parity_port)
+
 ''' Tạo các nút '''
 # Tạo nút Open
 btn_open = tk.Button(root, text='Open', command=open_click,bg='white')
@@ -293,8 +244,13 @@ objects_0.append(btn_close)
 
 # Tạo nút chọn cổng COM
 connect_button = tk.Button(root, text="Connect", state='disabled', command=connect_uart,bg='white')
-connect_button.place(x=420, y=90, height=30, width=70)
+connect_button.place(x=540, y=90, height=30, width=100)
 objects_0.append(connect_button)
+
+# Tạo nút Show value
+show_button = tk.Button(root,text = 'Show value',state= 'disabled',bg='white',command=show_click)
+show_button.place(x= 660,y=90,height=30,width=100)
+objects_2.append(show_button)
 
 ''' chức năng auto'''
 # Tạo nút Auto
