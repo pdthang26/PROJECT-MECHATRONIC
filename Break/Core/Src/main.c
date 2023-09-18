@@ -260,25 +260,33 @@ int main(void)
 					if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 0)
 					{
 						while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 0)
-						{
-							adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-							pwmValueCW = (uint16_t)(65535 * adcValue);
-							pwmValueCCW = 0;
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-						}
+							{
+								adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
+								pwmValueCW = (uint16_t)(65535 * adcValue);
+								pwmValueCCW = 0;
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							}
+						pwmValueCW = 0;
+						pwmValueCCW = 0;
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 						state = 0;
 					}
 				}		
 				else if (state==0)
 				{
-					while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 1)
+					while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
 					{
 						pwmValueCW = 0;
 						pwmValueCCW = 0.2*65535;
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 					}
+					pwmValueCW = 0;
+					pwmValueCCW = 0;
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 					state = 1;
 				}
 				break;
@@ -632,7 +640,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PB3 PB4 */
   GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
