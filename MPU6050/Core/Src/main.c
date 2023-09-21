@@ -63,7 +63,7 @@ TIM_HandleTypeDef htim1;
 /* USER CODE BEGIN PV */
 // IMU variable 
 MPU6050_t 				Data;
-uint8_t oneOnly = 1;
+uint16_t cnt = 0;
 
 
 // I2C of LCD 16x2
@@ -178,39 +178,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		switch(mode_1){
-			case IDLE:
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
-				break;
-			case AUTO:
-				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
-					HAL_Delay(2000);
-					changeMode=mode_1;
-				}
-				break;
-			case MANUAL:
-				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
-					changeMode=mode_1;
-					HAL_Delay(2000);
-					CLCD_I2C_Clear(&LCD1);
-				}
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.Ax,Data.Az);
-				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-				CLCD_I2C_SetCursor(&LCD1, 0,1);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-
-				break;
+		sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.AngleZ);
+		sprintf(lcdAcelY,"Y:%.2f ",Data.KalmanAngleY);
+		CLCD_I2C_SetCursor(&LCD1, 0,0);
+		CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+		CLCD_I2C_SetCursor(&LCD1, 0,1);
+		CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				
-		}
+
 		
 	}
 		
@@ -418,6 +393,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -427,12 +406,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 	if (GPIO_Pin==GPIO_PIN_5)
 	{		
-		if(oneOnly != 0 )
-		{
-			MPU6050_Calculation_offset_Gryo(&hi2c1, &Data);
-			oneOnly  = 0;
-		}
-		MPU6050_Read_All(&hi2c1, &Data);
+//		if(cnt < 3000 )
+//		{
+//			MPU6050_Calculation_offset_Gryo(&hi2c1, &Data);
+//			cnt++;
+//			if(cnt==3000) Data.gyroZoffset = Data.gyroZoffset/3000.0;
+//		}
+//		else
+			MPU6050_Read_All(&hi2c1, &Data);
 	}
 }
 

@@ -1,10 +1,10 @@
 --cpu Cortex-M3
 "mpu6050\startup_stm32f103xb.o"
+"mpu6050\clcd_i2c.o"
+"mpu6050\mpu6050.o"
 "mpu6050\main.o"
 "mpu6050\stm32f1xx_it.o"
 "mpu6050\stm32f1xx_hal_msp.o"
-"mpu6050\clcd_i2c.o"
-"mpu6050\mpu6050.o"
 "mpu6050\stm32f1xx_hal_gpio_ex.o"
 "mpu6050\stm32f1xx_hal_can.o"
 "mpu6050\stm32f1xx_hal.o"

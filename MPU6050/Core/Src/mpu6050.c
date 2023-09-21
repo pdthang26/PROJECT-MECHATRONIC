@@ -56,6 +56,7 @@ const double Accel_Z_corrector = 16348.0;
 uint16_t time = 0;
 uint16_t lastTime = 0;
 double dt;
+double yaw;
 
 Kalman_t KalmanX = {
     .Q_angle = 0.001f,
@@ -63,6 +64,11 @@ Kalman_t KalmanX = {
     .R_measure = 0.03f};
 
 Kalman_t KalmanY = {
+    .Q_angle = 0.001f,
+    .Q_bias = 0.003f,
+    .R_measure = 0.03f,
+};
+Kalman_t KalmanZ = {
     .Q_angle = 0.001f,
     .Q_bias = 0.003f,
     .R_measure = 0.03f,
@@ -114,17 +120,12 @@ uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx)
 void MPU6050_Calculation_offset_Gryo(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
 {
 	uint8_t Rec_Data[2];
-	uint16_t regGryoZ;
-	double z;
+	int16_t regGryoZ;
 	// Read 6 BYTES of data starting from GYRO_XOUT_H register
-	for(int i=0;i<3000;i++)
-  {
-		HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, 0x47, 1, Rec_Data, 2, i2c_timeout);
-		regGryoZ = (int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
-
-		z += (double)regGryoZ / 131.0;
-	}
-	DataStruct->gyroZoffset = z/3000;
+	HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, 0x47, 1, Rec_Data, 2, i2c_timeout);
+	regGryoZ =(int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
+	DataStruct->gyroZoffset += (double)(regGryoZ / 131.0);
+	
 }
 
 void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
@@ -242,9 +243,11 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     if (fabs(DataStruct->KalmanAngleY) > 90) DataStruct->Gx = -DataStruct->Gx;
     DataStruct->KalmanAngleX = Kalman_getAngle(&KalmanX, roll, DataStruct->Gx, dt);
 		
-		double gyroZ = DataStruct->Gz;
-		gyroZ -= DataStruct->gyroZoffset;
-		DataStruct->AngleZ += gyroZ*dt;
+
+    yaw +=(double) (DataStruct->Gz+1.5)*dt*2;
+
+
+		DataStruct->AngleZ = Kalman_getAngle(&KalmanZ, yaw, DataStruct->Gz, dt);
 }
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt)
