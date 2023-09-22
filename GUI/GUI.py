@@ -16,28 +16,32 @@ GUI_color = '#C9F4AA'
 manu_color = '#F7C8E0'
 
 # Tạo mảng bao gồm các thành phần trên giao diện
-objects_0 = [] # mảng cho nút để active các elements trong open và disable tất cả trong close
-objects_1 = [] # mảng chứa các thành phần để active bằn nút manual
+objects_1 = [] # mảng chứa các thành phần để active bằng nút manual
 objects_2 = [] # mảng chứa các elements để active bằng nút Connect
 objects_3 = [] # các element combobox về UART parameter
 
 # Bit kết thúc
-stop_bit = '\n'
+stop_bit = b'\n'
 
 # Các biến dùng truyền UART
-b_uart=f_uart=p_uart=para_uart= None
+b_uart= f_uart= p_uart= ang_uart= vel_uart= dis_uart = None
 
 ''' Chức năng giao diện '''
 
 # Hàm cho nút connect
 def connect_uart():
-    # kích hoạt nút Manual, Auto
+
+    #Kích hoạt nút Disconnect
+    disconnect_button['state']='normal'
+
+    # kích hoạt nút Manual, Auto, Show Car Value
     for obj in objects_2:
         obj['state'] = 'normal'
 
-    global b_uart,f_uart,p_uart,para_uart
+    global b_uart,f_uart,p_uart
+    global ang_uart,vel_uart,dis_uart
+    global emer_uart
 
-    
     # Các biến parameter cho UART
     selected_port = com_port.get()
     selected_rate = int(rate_port.get())
@@ -77,7 +81,7 @@ def connect_uart():
     parity_bit_value =switch_case_3(select_parity)
 
     # Tạo kết nối UART với các biến bánh trước, bánh sau, phanh
-    b_uart = f_uart = p_uart= para_uart= serial.Serial(
+    ang_uart= vel_uart= dis_uart= b_uart= f_uart= p_uart =serial.Serial(
         port=selected_port,
         baudrate=selected_rate,
         stopbits=stop_bit_value,
@@ -87,6 +91,7 @@ def connect_uart():
     )
 
     if b_uart.is_open:
+
         open_status['bg']='green'
         close_status['bg']='white'
 
@@ -107,10 +112,6 @@ def connect_uart():
         canvas = tk.Canvas(popup, width=100, height=100,bd=0)
         canvas.place(x=1,y=1)
 
-        image = Image.open("D:\PROJECT-MECHATRONIC/GUI/successful.png")
-        image = image.resize((50, 50), Image.ANTIALIAS)
-        photo = ImageTk.PhotoImage(image)
-
         image = Image.open("D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/successful.png")
         image = image.resize((50, 50), Image.ANTIALIAS)
         photo = ImageTk.PhotoImage(image)
@@ -128,26 +129,30 @@ def connect_uart():
 
 def show_click():
 
-    #Đọc dữ liệu uart 
-    # # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
-    parameter= para_uart_uart.readline().decode().strip() 
+    # Đọc dữ liệu uart 
+    # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
+    
+    # Đọc UART về góc
+    angle = ang_uart.readline().decode().strip()
+
+    #Đọc UART về tốc độ
+    velocity = vel_uart.readline().decode().strip()
+
+    # Đọc UART về quãng đường 
+    distance = dis_uart.readline().decode().strip()
        
     # Xử lý tính hiệu UART
-    if para_uart.startswith('A'):
-        angle_display['text']=parameter[1:]
-    elif para_uart.startswith('V'):
-        vel_display['text']=parameter[1:]
-    elif para_uart.startswith('D'):
-        dis_display['text']=parameter[1:]
+    if angle.startswith('A'):
+        angle_display['text']= angle[1:]
+    if velocity.startswith('V'):
+        vel_display['text']= velocity[1:]
+    if distance.startswith('D'):
+        dis_display['text']= distance[1:]
 
-# Hàm cho nút Open
-def open_click():
-    for obj in objects_0:
-        obj['state'] = 'normal'
-    
-# Hàm cho nút Close
-def close_click():
-    for obj in objects_0+objects_1+objects_2:
+#Hàm cho nút Disconnect
+def disconnect_uart():
+
+    for obj in objects_1+objects_2:
         obj['state'] = 'disabled'
     for obj in objects_3:
         obj.set('')
@@ -157,16 +162,35 @@ def close_click():
         b_uart.close()
         f_uart.close()
         p_uart.close()
-        angle_uart.close()
-        velocity_uart.close()
+        ang_uart.close()
+        vel_uart.close()
+        dis_uart.close()
 
     if not b_uart.is_open:
         open_status['bg']='white'
         close_status['bg']='red'
+        messagebox.showerror('Warning','UART is disconnected !')
+
+
+# Hàm cho nút Open
+def open_click():
+    #Kích hoạt nút Connect 
+    connect_button['state']='normal'
+    #Kích hoạt các Combobox 
+    for obj in objects_3:
+        obj['state']='normal'
+    
+# Hàm cho nút Close
+def close_click():
+    
+    # Hiện ô thông báo lữa chọn muốn đóng cửa sổ giao diện
+    result = messagebox.askyesno("Exit", "Do you want to exit?")
+    if result:
+        root.destroy()
 
 # Tạo cửa sổ giao diện chính
 root = tk.Tk()
-root.geometry("1060x500")
+root.geometry("1060x600")
 root.configure(bg=GUI_color)
 root.resizable(height=False, width=False)
 
@@ -194,27 +218,39 @@ parity_label.place(x=420,y=5)
 
 # Tạo nhãn cho hiển thị Angle
 angle_label = tk.Label(root,text='Angle',bg=GUI_color)
-angle_label.place(x=700,y= 5)
+angle_label.place(x=680,y= 5)
 
 #Tạo ô hiển thị cho Angle
-angle_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-angle_display.place(x=700,y=30,height=30,width=100)
+angle_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white',font=('Arial',13,'bold'))
+angle_display.place(x=680,y=30,height=30,width=130)
 
-# Tạo nhãn cho Velocity
-vel_label = tk.Label(root,text='Velocity',bg=GUI_color)
-vel_label.place(x= 820,y=5 )
+# Tạo nhãn hiển thị đơn vị góc quay
+ang_unit = tk.Label(root,text = '\u00B0',bg=GUI_color,font=('Arial',15,'bold'))
+ang_unit.place(x=815,y=30)
 
-#Tạo ô hiển thị Velocity
-vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-vel_display.place(x=820,y=30,width=100,height=30)
+# Tạo nhãn cho Speed
+vel_label = tk.Label(root,text='Speed',bg=GUI_color)
+vel_label.place(x= 680,y=65 )
+
+#Tạo ô hiển thị Speed
+vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white',font=('Arial',13,'bold'))
+vel_display.place(x=680,y=90,width=130,height=30)
+
+# Tạo nhãn đơn vị cho tốc độ
+speed_unit = tk.Label(root,text='m/s',bg=GUI_color,font=('Arial',13))
+speed_unit.place(x=815,y=90)
 
 #Tạo nhãn cho Distance
 dis_label = tk.Label(root,text='Distance',bg=GUI_color)
-dis_label.place(x= 940,y=5)
+dis_label.place(x= 880,y=5)
 
 #Tạo ô hiển thị cho Distance 
 dis_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-dis_display.place(x=940,y=30,height=30,width=100)
+dis_display.place(x=880,y=30,height=30,width=130)
+
+#Tạo nhãn hiển thị đơn vị cho Distance
+dis_unit =tk.Label(root,text='m',bg=GUI_color,font=('Arial',13))
+dis_unit.place(x=1015,y=30)
 
 #Tạo nhãn cho status
 status_label = tk.Label(root,text='UART status',bg=GUI_color)
@@ -232,32 +268,27 @@ rate = [
 # Tạo ô chọn cổng COM cho điều khiển
 com_port = ttk.Combobox(root, values=com_ports, state='disabled')
 com_port.place(x=180, y=30, height=30, width=100)
-objects_0.append(com_port)
 objects_3.append(com_port)
 
 # Tạo ô chọn Baud Rate
 rate_port = ttk.Combobox(root, values=rate, state='disabled')
 rate_port.place(x=300, y=30, height=30, width=100)
 rate_port.set(rate[10])
-objects_0.append(rate_port)
 objects_3.append(rate_port)
 
 # Tạo ô chọn Data Bits
 data_port  = ttk.Combobox(root,values = ['7','8'],state='disabled')
 data_port.place(x=180, y=90, height=30, width=100)
-objects_0.append(data_port)
 objects_3.append(data_port)
 
 #Tạo ô chọn Stop Bit
 stop_port = ttk.Combobox(root,values=['1','1.5','2'],state='disabled')
 stop_port.place(x=300,y=90,height=30,width=100)
-objects_0.append(stop_port)
 objects_3.append(stop_port)
 
 #Tạo ô chọn Parity Bit 
 parity_port =ttk.Combobox(root,values=['even','odd','none'],state='disabled')
 parity_port.place(x=420,y=30,height=30,width=100)
-objects_0.append(parity_port)
 objects_3.append(parity_port)
 
 ''' Tạo các nút '''
@@ -265,19 +296,21 @@ objects_3.append(parity_port)
 btn_open = tk.Button(root, text='Open', command=open_click,bg='white')
 btn_open.place(x=10, y=30, height=30, width=70)
 
-# Tạo nút Close
-btn_close = tk.Button(root, text='Close', state='disabled', command=close_click,bg='white')
+# Tạo nút Close cửa sổ chương trình
+btn_close = tk.Button(root, text='Close', command=close_click,bg='white')
 btn_close.place(x=90, y=30, height=30, width=70)
-objects_0.append(btn_close)
 
-# Tạo nút chọn cổng COM
+# Tạo nút kết nối UART
 connect_button = tk.Button(root, text="Connect", state='disabled', command=connect_uart,bg='white')
 connect_button.place(x=540, y=30, height=30, width=100)
-objects_0.append(connect_button)
+
+# Tạo nút ngắt UART 
+disconnect_button = tk.Button(root,text='Disconnect',state ='disabled',bg='white',command=disconnect_uart)
+disconnect_button.place(x=540,y=90,height=30,width=100)
 
 # Tạo nút Show value
-show_button = tk.Button(root,text = 'Show value',state= 'disabled',bg='white',command=show_click)
-show_button.place(x= 540,y=90,height=30,width=100)
+show_button = tk.Button(root,text = 'Show Car Value',state= 'disabled',bg='white',command=show_click)
+show_button.place(x= 880,y=90,height=30,width=130)
 objects_2.append(show_button)
 
 # Frame Status Uart
@@ -314,7 +347,7 @@ manu_fr_label = tk.Label(root,text='Manual Control', bg=GUI_color,font=('Arial',
 manu_fr_label.place(x=10,y=150)
 
 '''Tạo frame cho Manual Control'''
-manu_frame = tk.Frame(root,width =530,height=265, highlightbackground='#241468',highlightthickness=2,bg=manu_color )
+manu_frame = tk.Frame(root,width =530,height=395, highlightbackground='#241468',highlightthickness=2,bg=manu_color )
 manu_frame.place(x= 10, y= 190)
 
 # Tạo nhãn cho di chuyển trước và sau
@@ -336,6 +369,9 @@ back_frame.place(x= 10, y= 40)
 '''Khai báo biến direction'''
 direction = 0
 
+# Bit bắt đầu cho gửi UART bánh sau
+b_start_bit = b'B'
+
 '''Code cho nút forward'''
 # Hàm cho nút forward để đổi hình khi ấn
 def forward(event):
@@ -347,10 +383,10 @@ def forward(event):
             forward_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/2.png')
             #truyền UART cho bánh sau
             if b_uart.is_open:
-                start_bit = 'B'
-                back_for_adc = linear_scale.get()
-                direction = "T"
-                b_uart.write(bytearray([ord(start_bit),ord(direction),back_for_adc,ord(stop_bit)]))
+                back_for_adc = str(int(linear_scale.get()))
+                direction = b'T'
+                uart_data = b_start_bit + direction + back_for_adc.encode('utf-8') + stop_bit
+                b_uart.write(uart_data)
             else:
                 messagebox.showwarning('Warning','Please connect the UART')
         else:
@@ -358,9 +394,10 @@ def forward(event):
             forward_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/1.png')
             # truyền UART cho bánh sau
             if b_uart.is_open:
-                start_bit = 'B'
-                back_for_adc = 0
-                b_uart.write(bytearray([ord(start_bit),back_for_adc,ord(stop_bit)]))
+                start_bit = b'B'
+                back_for_adc = str(0)
+                uart_data = b_start_bit + back_for_adc.encode('utf-8') + stop_bit
+                b_uart.write(uart_data)
             else:
                 messagebox.showwarning('Warning','Please connect the UART')
 
@@ -390,10 +427,11 @@ def reverse(event):
             reverse_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/4.png')
             #truyền UART giá trị tốc độ cho bánh sau
             if b_uart.is_open:
-                start_bit = 'B'
-                back_rev_adc = linear_scale.get()
-                direction = "L"
-                b_uart.write(bytearray([ord(start_bit),ord(direction),back_rev_adc,ord(stop_bit)]))
+                back_rev_adc = str(int(linear_scale.get())) #gán thành chuỗi kí tự
+                direction = b'L'
+                uart_data = b_start_bit + direction + back_rev_adc.encode('utf-8') + stop_bit
+                b_uart.write(uart_data)
+
             else:
                 messagebox.showwarning('Warning','Please connect the UART')
         else:
@@ -401,9 +439,9 @@ def reverse(event):
             reverse_btn = PhotoImage(file='D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/3.png')
             #truyền UART giá trị tốc độ cho bánh sau
             if b_uart.is_open:
-                start_bit = 'B'
-                back_rev_adc = 0
-                b_uart.write(bytearray([ord(start_bit),back_rev_adc,ord(stop_bit)]))
+                back_rev_adc = str(0)
+                uart_data = b_start_bit + back_rev_adc.encode('utf-8') + stop_bit
+                b_uart.write(uart_data)
             else:
                 messagebox.showwarning('Warning','Please connect the UART')
 
@@ -432,12 +470,15 @@ objects_1.append(linear_scale)
 front_frame = tk.Frame(manu_frame,height=85, width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
 front_frame.place(x=205,y=40)
 
+# Start bit for UART transmission on the front wheel
+f_start_bit = b'F'
+
 ''' Code cho tạo thanh trượt rẽ trái phải'''
 #truyền UART bánh trước
 def turn_slide(value):
-    turn_adc = int(value)
-    start_bit = 'F'
-    uart_data = bytearray([ord(start_bit),abs(turn_adc),ord(stop_bit)])
+    
+    turn_adc = str(int(value))
+    uart_data = f_start_bit + turn_adc.encode('utf-8') + stop_bit    
     if f_uart.is_open:
         f_uart.write(uart_data)  
 
@@ -453,6 +494,9 @@ objects_1.append(turn_scale)
 brake_frame = tk.Frame(manu_frame,height=90,width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
 brake_frame.place(x=205,y=165)
 
+# Start bit for UART transmission on brake
+p_start_bit = b'P'
+
 ''' Code cho nút phanh'''
 # Hàm cho nút Brake để đổi hình khi ấn
 def brake(event):
@@ -465,18 +509,18 @@ def brake(event):
             brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_2.png')
             # truyền uart cho adc cho phanh
             if p_uart.is_open:
-                start_bit = 'P'
-                brake_adc = brake_slide.get()
-                p_uart.write(bytearray([ord(start_bit),brake_adc,ord(stop_bit)]))
+                brake_adc = str(int(brake_slide.get()))
+                uart_data = p_start_bit + brake_adc.encode('utf-8') + stop_bit
+                p_uart.write(uart_data)
         else:
             # Mở ảnh mặc định khi nút được thả ra
             brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_1.png')
             # truyền uart cho adc cho phanh
             if p_uart.is_open:
-                start_bit = 'P'
-                brake_adc = 0
-                p_uart.write(bytearray([ord(start_bit),brake_adc,ord(stop_bit)]))
-
+                brake_adc = str(0)
+                uart_data = p_start_bit + brake_adc.encode('utf-8') + stop_bit
+                p_uart.write(uart_data)
+                
     btn_brake['image']= brake_btn
 
 # Mở ảnh
@@ -497,6 +541,37 @@ brake_slide = tk.Scale(brake_frame,from_=0,to=100,orient=tk.HORIZONTAL,bg='white
 brake_slide.set(0)
 brake_slide.place(x=85,y=10,width=220,height=70)
 objects_1.append(brake_slide)
+
+''' Code for Emergency Stop button in Manual Control '''
+
+# Gán sự kiện khi bấm nút Emergency Stop 
+def emer_click(event):
+    
+    if manu_emer_button['state']!='disabled':
+        if event.type == '4': #Button is Pressed
+            wheel_adc = str(0)
+            brake_adc = '100'
+            uart_data_1 = b_start_bit + wheel_adc.encode('utf-8') + stop_bit
+            uart_data_2 = p_start_bit + brake_adc.encode('utf-8') + stop_bit
+            b_uart.write(uart_data_1)
+            p_uart.write(uart_data_2)
+        
+        else:
+            brake_adc = str(0)
+            uart_data_2 = p_start_bit + brake_adc.encode('utf-8') + stop_bit
+            p_uart.write(uart_data_2)
+
+# Mở ảnh
+manu_emer = PhotoImage(file = 'D:\STUDYING\Mechatronic Project\PROJECT-MECHATRONIC\GUI\emergency stop.png')
+
+# Emergency Stop button for manual mode creation
+manu_emer_button = tk.Button(manu_frame,image = manu_emer, bg= manu_color, borderwidth=0, state='disabled' )
+manu_emer_button.place(x=225, y=275, width=100, height=100)
+objects_1.append(manu_emer_button)
+
+# gắn sự kiện cho nút Emergency Stop
+manu_emer_button.bind('<ButtonPress-1>',emer_click)
+manu_emer_button.bind('<ButtonRelease-1>',emer_click)
 
 # Chạy vòng lặp giao diện
 root.mainloop()
