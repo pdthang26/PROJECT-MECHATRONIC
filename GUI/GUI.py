@@ -25,7 +25,7 @@ objects_3 = [] # các element combobox về UART parameter
 stop_bit = '\n'
 
 # Các biến dùng truyền UART
-b_uart=f_uart=p_uart=angle_uart=velocity_uart= None
+b_uart=f_uart=p_uart=para_uart= None
 
 ''' Chức năng giao diện '''
 
@@ -35,7 +35,7 @@ def connect_uart():
     for obj in objects_2:
         obj['state'] = 'normal'
 
-    global b_uart,f_uart,p_uart,angle_uart,velocity_uart
+    global b_uart,f_uart,p_uart,para_uart
 
     
     # Các biến parameter cho UART
@@ -77,7 +77,7 @@ def connect_uart():
     parity_bit_value =switch_case_3(select_parity)
 
     # Tạo kết nối UART với các biến bánh trước, bánh sau, phanh
-    b_uart = f_uart = p_uart= angle_uart = velocity_uart= serial.Serial(
+    b_uart = f_uart = p_uart= para_uart= serial.Serial(
         port=selected_port,
         baudrate=selected_rate,
         stopbits=stop_bit_value,
@@ -107,6 +107,10 @@ def connect_uart():
         canvas = tk.Canvas(popup, width=100, height=100,bd=0)
         canvas.place(x=1,y=1)
 
+        image = Image.open("D:\PROJECT-MECHATRONIC/GUI/successful.png")
+        image = image.resize((50, 50), Image.ANTIALIAS)
+        photo = ImageTk.PhotoImage(image)
+
         image = Image.open("D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/successful.png")
         image = image.resize((50, 50), Image.ANTIALIAS)
         photo = ImageTk.PhotoImage(image)
@@ -124,16 +128,17 @@ def connect_uart():
 
 def show_click():
 
-    #Đọc dữ liệu uart
-    angle = angle_uart.readline().decode().strip() 
-    # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
-    velocity = velocity_uart.readline().decode().strip()
-
+    #Đọc dữ liệu uart 
+    # # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
+    parameter= para_uart_uart.readline().decode().strip() 
+       
     # Xử lý tính hiệu UART
-    if angle.startswith('A'):
-        angle_display['text']=angle[1:]
-    if velocity.startswith('V'):
-        vel_display['text']=velocity[1:]
+    if para_uart.startswith('A'):
+        angle_display['text']=parameter[1:]
+    elif para_uart.startswith('V'):
+        vel_display['text']=parameter[1:]
+    elif para_uart.startswith('D'):
+        dis_display['text']=parameter[1:]
 
 # Hàm cho nút Open
 def open_click():
