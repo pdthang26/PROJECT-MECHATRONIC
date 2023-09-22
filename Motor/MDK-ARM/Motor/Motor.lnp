@@ -4,6 +4,7 @@
 "motor\main.o"
 "motor\stm32f1xx_it.o"
 "motor\stm32f1xx_hal_msp.o"
+"motor\mcp4725_i2c.o"
 "motor\stm32f1xx_hal_gpio_ex.o"
 "motor\stm32f1xx_hal_adc.o"
 "motor\stm32f1xx_hal_adc_ex.o"

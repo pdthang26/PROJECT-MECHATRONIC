@@ -1,4 +1,4 @@
-motor/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
+motor/mcp4725_i2c.o: ..\Core\Src\MCP4725_I2C.c ..\Core\Inc\MCP4725_I2C.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal.h \
   ..\Core\Inc\stm32f1xx_hal_conf.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_rcc.h \
@@ -30,7 +30,4 @@ motor/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_i2c.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_pwr.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_tim.h \
-  ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_tim_ex.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h ..\Core\Inc\CLCD_I2C.h \
-  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\math.h \
-  ..\Core\Inc\MCP4725_I2C.h
+  ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_tim_ex.h
