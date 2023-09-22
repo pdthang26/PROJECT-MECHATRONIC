@@ -9,6 +9,12 @@ from math import *
 
 '''Tạo các biến cần thiết cho chương trình'''
 
+# biến màu giao diện
+GUI_color = '#C9F4AA'
+
+# biến màu frame Manual
+manu_color = '#F7C8E0'
+
 # Tạo mảng bao gồm các thành phần trên giao diện
 objects_0 = [] # mảng cho nút để active các elements trong open và disable tất cả trong close
 objects_1 = [] # mảng chứa các thành phần để active bằn nút manual
@@ -31,20 +37,22 @@ def connect_uart():
 
     global b_uart,f_uart,p_uart,angle_uart,velocity_uart
 
+    
+    # Các biến parameter cho UART
     selected_port = com_port.get()
-    selected_gps = gps_port.get()
     selected_rate = int(rate_port.get())
     selected_stop = stop_port.get()
     select_data = int(data_port.get())
-    
+    select_parity = parity_port.get()
+        
     # tạo một switch case check coi stop bit chọn bao nhiêu bit
     def switch_case_1(argument):
         if argument == '1':
-            output = serial.STOPBITS_ONE
+                output = serial.STOPBITS_ONE
         elif argument == '1.5':
-            output = serial.STOPBITS_ONE_POINT_FIVE
+                output = serial.STOPBITS_ONE_POINT_FIVE
         elif argument == '2':
-            output = serial.STOPBITS_TWO
+                output = serial.STOPBITS_TWO
         return output
     stop_bit_value = switch_case_1(selected_stop)
 
@@ -57,46 +65,62 @@ def connect_uart():
         return output
     data_bit_value = switch_case_2(select_data)
 
+    #tạo một switch case để check coi parity bit được chọn là even, odd hay none
+    def switch_case_3(argument):
+        if argument == 'even':
+            output = serial.PARITY_EVEN
+        elif argument =='odd':
+            output = serial.PARITY_ODD
+        elif argument =='none':
+            output =serial.PARITY_NONE
+        return output
+    parity_bit_value =switch_case_3(select_parity)
+
     # Tạo kết nối UART với các biến bánh trước, bánh sau, phanh
     b_uart = f_uart = p_uart= angle_uart = velocity_uart= serial.Serial(
         port=selected_port,
         baudrate=selected_rate,
         stopbits=stop_bit_value,
         bytesize=data_bit_value,
+        parity=parity_bit_value,
         timeout=1  # Timeout cho phép đọc từ giao diện UART
     )
 
-    # tạo popup thông báo kết nối thành công 
-    popup = tk.Toplevel()
-    popup.title('Success')
-    popup.resizable(height=False,width=False)
-      
-    # Tính toán vị trí của popup
-    root_width = root.winfo_width()
-    root_height = root.winfo_height()
-    popup_width = 320
-    popup_height = 120
-    x = root.winfo_rootx() + (root_width - popup_width) // 2
-    y = root.winfo_rooty() + (root_height - popup_height) // 2
-    popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
-     
-    canvas = tk.Canvas(popup, width=100, height=100,bd=0)
-    canvas.place(x=1,y=1)
+    if b_uart.is_open:
+        open_status['bg']='green'
+        close_status['bg']='white'
 
-    image = Image.open("D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/successful.png")
-    image = image.resize((50, 50), Image.ANTIALIAS)
-    photo = ImageTk.PhotoImage(image)
+        # tạo popup thông báo kết nối thành công 
+        popup = tk.Toplevel()
+        popup.title('Success')
+        popup.resizable(height=False,width=False)
+        
+        # Tính toán vị trí của popup
+        root_width = root.winfo_width()
+        root_height = root.winfo_height()
+        popup_width = 320
+        popup_height = 120
+        x = root.winfo_rootx() + (root_width - popup_width) // 2
+        y = root.winfo_rooty() + (root_height - popup_height) // 2
+        popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+        
+        canvas = tk.Canvas(popup, width=100, height=100,bd=0)
+        canvas.place(x=1,y=1)
 
-    canvas.create_image(40,60,image=photo)
-    canvas.place(x= 1, y= 1)
+        image = Image.open("D:/STUDYING/Mechatronic Project/PROJECT-MECHATRONIC/GUI/successful.png")
+        image = image.resize((50, 50), Image.ANTIALIAS)
+        photo = ImageTk.PhotoImage(image)
 
-    label = tk.Label(popup, text="UART connection successfull",font=('Arial',12,'bold'))
-    label.place(x = 80, y= 30)
+        canvas.create_image(40,60,image=photo)
+        canvas.place(x= 1, y= 1)
 
-    ok_button = tk.Button(popup, text="OK",font=('Arial',11,'bold'), bg='white',command=popup.destroy)
-    ok_button.place(x = 150, y = 70, width= 50, height= 30)
+        label = tk.Label(popup, text="UART connection successfull",font=('Arial',12,'bold'))
+        label.place(x = 80, y= 30)
 
-    popup.mainloop()
+        ok_button = tk.Button(popup, text="OK",font=('Arial',11,'bold'), bg='white',command=popup.destroy)
+        ok_button.place(x = 150, y = 70, width= 50, height= 30)
+
+        popup.mainloop()
 
 def show_click():
 
@@ -124,67 +148,72 @@ def close_click():
         obj.set('')
     
     #Ngắt UART
-    b_uart.close()
-    f_uart.close()
-    p_uart.close()
-    angle_uart.close()
-    velocity_uart.close()
+    if b_uart.is_open:
+        b_uart.close()
+        f_uart.close()
+        p_uart.close()
+        angle_uart.close()
+        velocity_uart.close()
 
-# Tạo cửa sổ giao diện
+    if not b_uart.is_open:
+        open_status['bg']='white'
+        close_status['bg']='red'
+
+# Tạo cửa sổ giao diện chính
 root = tk.Tk()
-root.geometry("1040x400")
-root.configure(bg='#A8DF8E')
+root.geometry("1060x500")
+root.configure(bg=GUI_color)
 root.resizable(height=False, width=False)
 
 '''Tạo các nhãn'''
 
 # Tạo nhãn cho ô chọn cổng COM
-com_label = tk.Label(root, text="COM Port:", bg='#A8DF8E')
+com_label = tk.Label(root, text="COM Port:", bg=GUI_color)
 com_label.place(x=180, y=5)
 
 # Tạo nhãn cho ô chọn Baudrate
-rate_label = tk.Label(root, text='Baud Rate', bg='#A8DF8E')
-rate_label.place(x=420, y=5)
+rate_label = tk.Label(root, text='Baud Rate', bg=GUI_color)
+rate_label.place(x=300, y=5)
 
 # Tạo nhãn cho Data Bits
-data_label = tk.Label(root,text='Data Bit:',bg='#A8DF8E')
+data_label = tk.Label(root,text='Data Bit:',bg=GUI_color)
 data_label.place(x=180,y=65)
 
 #Tạo nhãn cho Stop Bit
-stop_label = tk.Label(root,text='Stop Bit',bg='#A8DF8E')
+stop_label = tk.Label(root,text='Stop Bit',bg=GUI_color)
 stop_label.place(x=300,y=65)
 
 #Tạo nhãn cho Parity bit
-parity_label = tk.Label(root,text = 'Parity Bit',bg='#A8DF8E')
-parity_label.place(x=420,y=65)
-
-# Tạo nhãn cho di chuyển trước và sau
-back_wheel_label = tk.Label(root,text='Back Wheel Control',bg='#A8DF8E',font=('Arial',12,'bold'))
-back_wheel_label.place(x=10,y=140)
-
-# Tạo nhãn cho bánh trước
-front_wheel_label = tk.Label(root,text='Front Wheel Control',bg='#A8DF8E',font=('Arial',12,'bold'))
-front_wheel_label.place(x=205, y=140)
-
-# Tạo nhãn cho phanh
-brake_label = tk.Label(root, text = 'Brake Control',bg='#A8DF8E',font=('Arial',12,'bold'))
-brake_label.place(x= 205, y= 265 )
+parity_label = tk.Label(root,text = 'Parity Bit',bg=GUI_color)
+parity_label.place(x=420,y=5)
 
 # Tạo nhãn cho hiển thị Angle
-angle_label = tk.Label(root,text='Angle',bg='#A8DF8E')
-angle_label.place(x=540,y= 5)
+angle_label = tk.Label(root,text='Angle',bg=GUI_color)
+angle_label.place(x=700,y= 5)
 
 #Tạo ô hiển thị cho Angle
 angle_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-angle_display.place(x=540,y=30,height=30,width=100)
+angle_display.place(x=700,y=30,height=30,width=100)
 
 # Tạo nhãn cho Velocity
-vel_label = tk.Label(root,text='Velocity',bg='#A8DF8E')
-vel_label.place(x= 660,y=5 )
+vel_label = tk.Label(root,text='Velocity',bg=GUI_color)
+vel_label.place(x= 820,y=5 )
 
 #Tạo ô hiển thị Velocity
 vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
-vel_display.place(x=660,y=30,width=100,height=30)
+vel_display.place(x=820,y=30,width=100,height=30)
+
+#Tạo nhãn cho Distance
+dis_label = tk.Label(root,text='Distance',bg=GUI_color)
+dis_label.place(x= 940,y=5)
+
+#Tạo ô hiển thị cho Distance 
+dis_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
+dis_display.place(x=940,y=30,height=30,width=100)
+
+#Tạo nhãn cho status
+status_label = tk.Label(root,text='UART status',bg=GUI_color)
+status_label.place(x=420,y=65)
 
 # Lấy danh sách tất cả các cổng COM 
 com_ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -201,15 +230,9 @@ com_port.place(x=180, y=30, height=30, width=100)
 objects_0.append(com_port)
 objects_3.append(com_port)
 
-# Tạo ô chọn cổng COM cho GPS
-gps_port = ttk.Combobox(root, value = com_ports, state= 'disabled' )
-gps_port.place(x = 300, y= 30,height=30,width=100)
-objects_0.append(gps_port)
-objects_3.append(gps_port)
-
 # Tạo ô chọn Baud Rate
 rate_port = ttk.Combobox(root, values=rate, state='disabled')
-rate_port.place(x=420, y=30, height=30, width=100)
+rate_port.place(x=300, y=30, height=30, width=100)
 rate_port.set(rate[10])
 objects_0.append(rate_port)
 objects_3.append(rate_port)
@@ -228,7 +251,7 @@ objects_3.append(stop_port)
 
 #Tạo ô chọn Parity Bit 
 parity_port =ttk.Combobox(root,values=['even','odd','none'],state='disabled')
-parity_port.place(x=420,y=90,height=30,width=100)
+parity_port.place(x=420,y=30,height=30,width=100)
 objects_0.append(parity_port)
 objects_3.append(parity_port)
 
@@ -244,13 +267,25 @@ objects_0.append(btn_close)
 
 # Tạo nút chọn cổng COM
 connect_button = tk.Button(root, text="Connect", state='disabled', command=connect_uart,bg='white')
-connect_button.place(x=540, y=90, height=30, width=100)
+connect_button.place(x=540, y=30, height=30, width=100)
 objects_0.append(connect_button)
 
 # Tạo nút Show value
 show_button = tk.Button(root,text = 'Show value',state= 'disabled',bg='white',command=show_click)
-show_button.place(x= 660,y=90,height=30,width=100)
+show_button.place(x= 540,y=90,height=30,width=100)
 objects_2.append(show_button)
+
+# Frame Status Uart
+status_frame = tk.Frame(root,height=30,width=100,bg='white')
+status_frame.place(x= 420,y=90)
+
+#Trạng thái UART is open
+open_status = tk.Label(status_frame)
+open_status.place(x=0,y=0,height=30,width=50)
+
+#Trạng thái UART close
+close_status =tk.Label(status_frame,bg='red')
+close_status.place(x=50,y=0,height=30,width=50)
 
 ''' chức năng auto'''
 # Tạo nút Auto
@@ -269,9 +304,29 @@ btn_manu = tk.Button(root, text='Manual', state='disabled',bg='white',command= m
 btn_manu.place(x=90, y=90, height=30, width=70)
 objects_2.append(btn_manu)
 
+# Tạo nhãn cho manu frame
+manu_fr_label = tk.Label(root,text='Manual Control', bg=GUI_color,font=('Arial',16,'bold'))
+manu_fr_label.place(x=10,y=150)
+
+'''Tạo frame cho Manual Control'''
+manu_frame = tk.Frame(root,width =530,height=265, highlightbackground='#241468',highlightthickness=2,bg=manu_color )
+manu_frame.place(x= 10, y= 190)
+
+# Tạo nhãn cho di chuyển trước và sau
+back_wheel_label = tk.Label(manu_frame,text='Back Wheel Control',bg=manu_color,font=('Arial',12,'bold'))
+back_wheel_label.place(x=10,y=10)
+
+# Tạo nhãn cho bánh trước
+front_wheel_label = tk.Label(manu_frame,text='Front Wheel Control',bg=manu_color,font=('Arial',12,'bold'))
+front_wheel_label.place(x=205, y=10)
+
+# Tạo nhãn cho phanh
+brake_label = tk.Label(manu_frame, text = 'Brake Control',bg=manu_color,font=('Arial',12,'bold'))
+brake_label.place(x= 205, y= 135 )
+
 ''' Tạo frame cho bánh sau'''
-back_frame = tk.Frame(root, width=185, height=215, highlightbackground='red', highlightthickness=2,bg='#A8DF8E')
-back_frame.place(x= 10, y= 170)
+back_frame = tk.Frame(manu_frame, width=185, height=215, highlightbackground='#645CAA', highlightthickness=2,bg=manu_color)
+back_frame.place(x= 10, y= 40)
 
 '''Khai báo biến direction'''
 direction = 0
@@ -369,8 +424,8 @@ linear_scale.place(x = 120, y= 10,height = 190)
 objects_1.append(linear_scale)
 
 '''Tạo frame cho bánh trước'''
-front_frame = tk.Frame(root,height=85, width=315,bg='#A8DF8E',highlightbackground='red',highlightthickness=2)
-front_frame.place(x=205,y=170)
+front_frame = tk.Frame(manu_frame,height=85, width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
+front_frame.place(x=205,y=40)
 
 ''' Code cho tạo thanh trượt rẽ trái phải'''
 #truyền UART bánh trước
@@ -390,8 +445,8 @@ objects_1.append(turn_scale)
 
 
 '''Tạo frame cho phanh'''
-brake_frame = tk.Frame(root,height=90,width=315,bg='#A8DF8E',highlightbackground='red',highlightthickness=2)
-brake_frame.place(x=205,y=295)
+brake_frame = tk.Frame(manu_frame,height=90,width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
+brake_frame.place(x=205,y=165)
 
 ''' Code cho nút phanh'''
 # Hàm cho nút Brake để đổi hình khi ấn
@@ -423,7 +478,7 @@ def brake(event):
 brake_btn = PhotoImage(file='D:/STUDYING\Mechatronic Project/PROJECT-MECHATRONIC/GUI/b_1.png')
 
 # Tạo nút Brake
-btn_brake = Button(brake_frame, image=brake_btn, bg='#A8DF8E', borderwidth=0, state='disabled')
+btn_brake = Button(brake_frame, image=brake_btn, bg=manu_color, borderwidth=0, state='disabled')
 btn_brake.place(x=10, y=10, width=70, height=70)
 objects_1.append(btn_brake)
 
