@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "CLCD_I2C.h"
 #include "math.h"
+#include "MCP4725_I2C.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +56,6 @@ I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 //LCD variable
@@ -64,7 +64,8 @@ float adcValue;
 float throValue;
 char row1[16];
 char row2[16];
-
+// MCP4725 variable
+MCP4725_I2C MCP4725;
 
 
 
@@ -119,7 +120,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_CAN_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C2_Init(void);
@@ -169,19 +169,21 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_CAN_Init();
   MX_ADC1_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
+//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13,1);
 	
 	//LCD
 	HAL_ADC_Start(&hadc1);
 	CLCD_I2C_Init(&LCD1,&hi2c2,0x4E,16,2);
+	
+	// init MCP4725 DAC
+	MCP4725_I2C_Init(&MCP4725, &hi2c2, 0xC0, WRITE_DAC_REG_ONLY, POW_DOWN_NOMAL);
 	
 	//initial CAN protocol
 	HAL_CAN_Start(&hcan);
@@ -216,7 +218,7 @@ while (1)
 		else if((btnState>>2&0x01) == 0)
 		{				
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-			pwm_value = adcValue*65535;
+			pwm_value = adcValue*4095;
 			sprintf(row1,"ADC:%.1f %d ",adcValue, pwm_value);
 			sprintf(row2,"encoder:%.2f",mps);
 			
@@ -230,7 +232,8 @@ while (1)
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
 			}
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+			MCP4725_I2C_SetValueDAC(&MCP4725, pwm_value);
 		}
 		
 		
@@ -522,65 +525,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 0;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 65535;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
-  HAL_TIM_MspPostInit(&htim4);
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -700,14 +644,14 @@ void dc_motor_control(float setpoint, float input)
 			pwm_value = output*0.01*65535;
 			TxData[7] = 0;
 			WriteCAN(BRAKE,TxData);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
 		}
     else if (output <=0.0)
 		{
 			TxData[7] = -output;
 			WriteCAN(BRAKE,TxData);
 			pwm_value = 0;
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
+//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
 		}
     
 }
