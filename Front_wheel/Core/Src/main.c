@@ -258,33 +258,13 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
-//				if((btnState&0x01) ==0)
-//				{
-//					pwmValueCW = (uint16_t)(65535 * adcValue);
-//					pwmValueCCW = 0;
-//					
-//				}
-//				else if((btnState>>1&0x01) ==0)
-//				{				
-//					pwmValueCW = 0;
-//					pwmValueCCW = (uint16_t)(65535 * adcValue);
-//				}
-//				else 
-//				{
-//					pwmValueCW = 0;
-//					pwmValueCCW = 0;
-//				}
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-
-
-				if(aileValue >75)
+				if((btnState&0x01) ==0)
 				{
 					pwmValueCW = (uint16_t)(65535 * adcValue);
 					pwmValueCCW = 0;
 					
 				}
-				else if(aileValue <15)
+				else if((btnState>>1&0x01) ==0)
 				{				
 					pwmValueCW = 0;
 					pwmValueCCW = (uint16_t)(65535 * adcValue);
@@ -296,6 +276,26 @@ int main(void)
 				}
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+
+
+//				if(aileValue >75)
+//				{
+//					pwmValueCW = (uint16_t)(65535 * adcValue);
+//					pwmValueCCW = 0;
+//					
+//				}
+//				else if(aileValue <15)
+//				{				
+//					pwmValueCW = 0;
+//					pwmValueCCW = (uint16_t)(65535 * adcValue);
+//				}
+//				else 
+//				{
+//					pwmValueCW = 0;
+//					pwmValueCCW = 0;
+//				}
+//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 				break;
 		}
 		

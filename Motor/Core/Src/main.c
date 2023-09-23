@@ -36,6 +36,9 @@
 #define SLAVE_ID2   				0x274
 #define BRAKE 							0x222
 
+#define AUTO   							0x01
+#define MANUAL 							0x02
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -85,7 +88,7 @@ int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 156; // pulse per revolution
+const float pulsesPerRevolution = 312; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -107,10 +110,8 @@ double alpha, beta, gamma;
 double Output, LastOutput;
 
 // Khai bao bien cho PWM
-uint16_t pwm_value = 0;
-float test = 0;
-float setSpeed = 0.0;    // expected speed (m/s)
-
+uint16_t DAC_value = 0; 
+uint8_t mode =0;
 uint8_t btnState;
 
 /* USER CODE END PV */
@@ -196,6 +197,8 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
+	MCP4725_I2C_SetValueDAC(&MCP4725, 0);// set initial value of DAC is 0
+	
 
   /* USER CODE END 2 */
 
@@ -212,15 +215,17 @@ while (1)
 		if((btnState>>3&0x01) == 0)
 		{
 			throValue = (float)RxDataThro[7];
-			setSpeed = map(throValue,100,30,200,0);
-			dc_motor_control(setSpeed,rpm);
+			mode = AUTO;
+			sprintf(row1,"dis:%.2f  ", posInMeter);
+			sprintf(row2,"encoder:%.2f  ",mps);
 		}
 		else if((btnState>>2&0x01) == 0)
-		{				
+		{			
+			mode = MANUAL;
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-			pwm_value = adcValue*4095;
-			sprintf(row1,"ADC:%.1f %d ",adcValue, pwm_value);
-			sprintf(row2,"encoder:%.2f",mps);
+			DAC_value = adcValue*4095;
+			sprintf(row1,"ADC:%.1f %d ",adcValue, DAC_value);
+			sprintf(row2,"encoder:%d",encoderValue);
 			
 			if((btnState>>1&0x01) == 0)
 			{
@@ -232,8 +237,8 @@ while (1)
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
 			}
-//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
-			MCP4725_I2C_SetValueDAC(&MCP4725, pwm_value);
+			MCP4725_I2C_SetValueDAC(&MCP4725, DAC_value);
+			
 		}
 		
 		
@@ -242,12 +247,7 @@ while (1)
 		CLCD_I2C_WriteString(&LCD1,row1);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,row2);
-		
-		
-//		pwm_value = pwm_generation(setSpeed);
-    
-		
-//		
+			
 		
   }
   /* USER CODE END 3 */
@@ -604,8 +604,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
-			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			last_encoderValue = encoderValue;		
+			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
+			last_encoderValue = encoderValue;	
+				
+			if(mode == AUTO) dc_motor_control(10,posInMeter);
+			
     }
 }
 
@@ -628,32 +631,23 @@ float pid_controller(float setpoint, float input, float dt)
 	return Output;
 }
 
-//uint16_t pwm_generation (float speed){
-//	uint16_t pwm;
-// pwm = -611.82* pow(speed,2)+8859.2*speed+28633;
-// return pwm;
-//}
+
 
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
 {
-    output = pid_controller(setpoint, input, sampleTime);
-    // gioi han gia tri pwm trong khoang 0 den 1
-    if (output > 0.0)
+		if(input<setpoint)
 		{
-			pwm_value = output*0.01*65535;
 			TxData[7] = 0;
 			WriteCAN(BRAKE,TxData);
-//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+			MCP4725_I2C_SetValueDAC(&MCP4725, 2300);
 		}
-    else if (output <=0.0)
+		else if (input>=setpoint)
 		{
-			TxData[7] = -output;
+			MCP4725_I2C_SetValueDAC(&MCP4725, 0);
+			TxData[7] = 100;
 			WriteCAN(BRAKE,TxData);
-			pwm_value = 0;
-//			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
-		}
-    
+    }
 }
 
 void WriteCAN(uint16_t ID,uint8_t *data)
