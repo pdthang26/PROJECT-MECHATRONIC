@@ -29,15 +29,15 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define diameter            0.4 //(m)
-#define PI                  3.14159
-#define MASTER_ID      			0x281
-#define SLAVE_ID1   				0x012
-#define SLAVE_ID2   				0x274
-#define BRAKE 							0x222
+#define diameter                0.4 //(m)
+#define PI                      3.14159
+#define MASTER_ID      			    0x281
+#define BACK_WHEEL_ID  				  0x012
+#define FRONT_WHEEL_ID  				0x274
+#define BRAKE 							    0x222
 
-#define AUTO   							0x01
-#define MANUAL 							0x02
+#define AUTO   							    0x01
+#define MANUAL 							    0x02
 
 /* USER CODE END PTD */
 
@@ -606,8 +606,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
 			last_encoderValue = encoderValue;	
+			
+			if(mode == AUTO) 
+			{
 				
-			if(mode == AUTO) dc_motor_control(10,posInMeter);
+				WriteCAN(TxData);
+				dc_motor_control(10,posInMeter);
+			}
 			
     }
 }
@@ -669,7 +674,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==SLAVE_ID1)
+		if(RxHeader.StdId==BACK_WHEEL_ID)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			RxDataThro[7]=RxData[7];
