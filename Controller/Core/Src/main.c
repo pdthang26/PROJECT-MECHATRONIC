@@ -34,8 +34,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MASTER_ID      			0x281
-#define SLAVE_ID1   				0x012
-#define SLAVE_ID2   				0x274
+#define BACK   							0x012
+#define FRONT   						0x274
+#define BRAKE								0x222
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,8 +56,11 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 // controller variable
-//uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
-//uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+uint32_t back_adc_p = 0;
+uint32_t front_adc_p = 0;
+uint32_t brake_adc_p = 0;
+
+//UART variables
 uint8_t count;
 uint8_t buffer;
 uint8_t dataBuff[6];
@@ -69,7 +73,7 @@ struct data
 
 struct data dataBackWheel;
 struct data dataFrontWheel;
-struct data dataBreak;
+struct data dataBrake;
 
 
 char kinhdo[16];
@@ -84,8 +88,9 @@ CLCD_I2C_Name LCD1;
 CAN_HandleTypeDef     CanHandle;
 CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
-uint8_t              	TxThro[8];
-uint8_t              	TxAile[8];
+uint8_t              	TxBack[8];
+uint8_t              	TxFront[8];
+uint8_t								TxBrake[8];
 uint8_t               RxData[8];
 uint32_t              TxMailbox;
 
@@ -194,7 +199,20 @@ int main(void)
 //		lastPulseWidthThro = pulseWidthThro;
 //		lastPulseWidthAile = pulseWidthAile;
 		
+		if (back_adc_p != dataBackWheel.val){
+			TxBack[7] = (uint8_t)dataBackWheel.val;
+			WriteCAN(BACK,TxBack);
+		}
 		
+		if (front_adc_p != dataFrontWheel.val){
+			TxFront[7] = (uint8_t)dataFrontWheel.val;
+			WriteCAN(FRONT,TxFront);
+		}
+		
+		if (brake_adc_p != dataBrake.val){
+			TxBrake[7] = (uint8_t)dataBrake.val;
+			WriteCAN(BRAKE,TxBrake);
+		}
 		
 		
 		
@@ -567,7 +585,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==SLAVE_ID1)
+		if(RxHeader.StdId==BACK)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 		}
@@ -617,7 +635,7 @@ void updateData (uint8_t checkType, uint8_t *data)
 			CharToNum (&dataFrontWheel.val, dataBuff, 1);
   		break;
 		case 'P':
-			CharToNum (&dataBreak.val, dataBuff, 1);
+			CharToNum (&dataBrake.val, dataBuff, 1);
   		break;
   }
 
