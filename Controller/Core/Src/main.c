@@ -35,8 +35,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MASTER_ID      			0x281
-#define SLAVE_ID1   				0x012
-#define SLAVE_ID2   				0x274
+#define BACK   							0x012
+#define FRONT   						0x274
+#define BRAKE								0x222
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,6 +59,11 @@ UART_HandleTypeDef huart3;
 // controller variable
 //uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
 //uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+uint32_t back_adc_p = 0;
+uint32_t front_adc_p = 0;
+uint32_t brake_adc_p = 0;
+
+
 uint8_t count;
 uint8_t buffer;
 uint8_t dataBuff[6];
@@ -70,7 +76,7 @@ typedef struct
 
 dataIn dataInBackWheel;
 dataIn dataInFrontWheel;
-dataIn dataInBreak;
+dataIn dataInBrake;
 
 typedef struct  
 {
@@ -95,8 +101,9 @@ CLCD_I2C_Name LCD1;
 CAN_HandleTypeDef     CanHandle;
 CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
-uint8_t              	TxThro[8];
-uint8_t              	TxAile[8];
+uint8_t              	TxBack[8];
+uint8_t              	TxFront[8];
+uint8_t								TxBrake[8];
 uint8_t               RxData[8];
 uint32_t              TxMailbox;
 
@@ -188,6 +195,20 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
+		if (back_adc_p != dataInBackWheel.val){
+			TxBack[7] = (uint8_t)dataInBackWheel.val;
+			WriteCAN(BACK,TxBack);
+		}
+		
+		if (front_adc_p != dataInFrontWheel.val){
+			TxFront[7] = (uint8_t)dataInFrontWheel.val;
+			WriteCAN(FRONT,TxFront);
+		}
+		
+		if (brake_adc_p != dataInBrake.val){
+			TxBrake[7] = (uint8_t)dataInBrake.val;
+			WriteCAN(BRAKE,TxBrake);
+		}
 		
 		
 		
@@ -595,7 +616,7 @@ void updateData (uint8_t checkType, uint8_t *data)
 			CharToNum (dataInFrontWheel.val, dataBuff, 2);
   		break;
 		case 'P':
-			CharToNum (dataInBreak.val, dataBuff, 2);
+			CharToNum (dataInBrake.val, dataBuff, 2);
   		break;
   }
 }
