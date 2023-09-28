@@ -21,10 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
 #include "CLCD_I2C.h"
 #include "mpu6050.h"
-#include "math.h"
+#include "convert_lib.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,8 +43,8 @@
 #define AUTO             		4
 #define MANUAL 							5
 #define MASTER_ID      			0x281
-#define SLAVE_ID1   				0x012
-#define SLAVE_ID2   				0x274
+#define BACK_WHEEL_ID   		0x012
+#define FRONT_WHEEL_ID   		0x274
 #define BREAK      					0x222
 /* USER CODE END PD */
 
@@ -59,6 +59,7 @@ CAN_HandleTypeDef hcan;
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
 // IMU variable 
@@ -83,7 +84,6 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
-uint8_t               RxDataBreak[8];
 uint32_t              TxMailbox;
 
 
@@ -98,6 +98,7 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_CAN_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void dc_motor_control(float setpoint, float input);
@@ -143,6 +144,7 @@ int main(void)
   MX_I2C1_Init();
   MX_CAN_Init();
   MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 	// start analog to digital convert
 
@@ -335,7 +337,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 72;
+  htim1.Init.Prescaler = 71;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -359,6 +361,51 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 799;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 899;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
@@ -406,14 +453,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 	if (GPIO_Pin==GPIO_PIN_5)
 	{		
-//		if(cnt < 3000 )
-//		{
-//			MPU6050_Calculation_offset_Gryo(&hi2c1, &Data);
-//			cnt++;
-//			if(cnt==3000) Data.gyroZoffset = Data.gyroZoffset/3000.0;
-//		}
-//		else
-			MPU6050_Read_All(&hi2c1, &Data);
+		MPU6050_Read_All(&hi2c1, &Data);
 	}
 }
 
@@ -436,16 +476,21 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==BREAK)
-		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			RxDataBreak[7]=RxData[7];
-		}
 	}
 	
 }
 
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim ->Instance == TIM2)
+	{
+		float yawValue = (float)Data.AngleZ;
+		convertFloatTo8Byte(yawValue, TxData, 4, 7);
+		TxData[3] = 'Y';
+		WriteCAN(MASTER_ID, TxData);
+		
+	}
+}
 /* USER CODE END 4 */
 
 /**

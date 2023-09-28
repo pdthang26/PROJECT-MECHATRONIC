@@ -5,6 +5,7 @@
 "mpu6050\main.o"
 "mpu6050\stm32f1xx_it.o"
 "mpu6050\stm32f1xx_hal_msp.o"
+"mpu6050\convert_lib.o"
 "mpu6050\stm32f1xx_hal_gpio_ex.o"
 "mpu6050\stm32f1xx_hal_can.o"
 "mpu6050\stm32f1xx_hal.o"

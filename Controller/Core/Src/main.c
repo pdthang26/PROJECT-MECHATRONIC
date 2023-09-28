@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "gps.h"
 #include "CLCD_I2C.h"
+#include "convert_lib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,9 +35,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MASTER_ID      			0x281
-#define BACK   							0x012
-#define FRONT   						0x274
-#define BRAKE								0x222
+#define SLAVE_ID1   				0x012
+#define SLAVE_ID2   				0x274
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,24 +56,31 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 // controller variable
-uint32_t back_adc_p = 0;
-uint32_t front_adc_p = 0;
-uint32_t brake_adc_p = 0;
-
-//UART variables
+//uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
+//uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
 uint8_t count;
 uint8_t buffer;
 uint8_t dataBuff[6];
 
-struct data
+typedef struct 
 {
 	char Dir;
 	uint16_t val;
-};
+}dataIn;
 
-struct data dataBackWheel;
-struct data dataFrontWheel;
-struct data dataBrake;
+dataIn dataInBackWheel;
+dataIn dataInFrontWheel;
+dataIn dataInBreak;
+
+typedef struct  
+{
+	char type;
+	float value;
+}dataCAN;
+
+dataCAN dataCANvel = {.type = 'V'};
+dataCAN dataCANpos = {.type = 'P'};
+dataCAN dataCANyaw = {.type = 'Y'};
 
 
 char kinhdo[16];
@@ -88,9 +95,8 @@ CLCD_I2C_Name LCD1;
 CAN_HandleTypeDef     CanHandle;
 CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
-uint8_t              	TxBack[8];
-uint8_t              	TxFront[8];
-uint8_t								TxBrake[8];
+uint8_t              	TxThro[8];
+uint8_t              	TxAile[8];
 uint8_t               RxData[8];
 uint32_t              TxMailbox;
 
@@ -109,12 +115,11 @@ static void MX_USART3_UART_Init(void);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
-uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin );
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void clearBuffer (uint8_t *buff);
 void updateData (uint8_t checkType,uint8_t *data);
-void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index);
+void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index);
 
 /* USER CODE END PFP */
 
@@ -182,37 +187,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//		pulseWidthThro = pulseIn(GPIO_PIN_1,1,100);
-//		pulseWidthAile = pulseIn(GPIO_PIN_0,1,100);
-//		GPS_Init(&GPS1,&huart1);
-//		if(lastPulseWidthThro != pulseWidthThro)
-//		{
-//			TxThro[7] = (uint8_t)pulseWidthThro;
-//			WriteCAN(SLAVE_ID1,TxThro );
-//		}
-//		if(lastPulseWidthAile != pulseWidthAile)
-//		{
-//			TxAile[7] = (uint8_t)pulseWidthAile;
-//			WriteCAN(SLAVE_ID2,(uint8_t*)TxAile );
-//		}
-//		
-//		lastPulseWidthThro = pulseWidthThro;
-//		lastPulseWidthAile = pulseWidthAile;
 		
-		if (back_adc_p != dataBackWheel.val){
-			TxBack[7] = (uint8_t)dataBackWheel.val;
-			WriteCAN(BACK,TxBack);
-		}
-		
-		if (front_adc_p != dataFrontWheel.val){
-			TxFront[7] = (uint8_t)dataFrontWheel.val;
-			WriteCAN(FRONT,TxFront);
-		}
-		
-		if (brake_adc_p != dataBrake.val){
-			TxBrake[7] = (uint8_t)dataBrake.val;
-			WriteCAN(BRAKE,TxBrake);
-		}
 		
 		
 		
@@ -539,28 +514,11 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
     }
     
     pulse = TIM2->CNT - lastTime;
-		
-//		pulseWidth = (pulse-110)*100/(190-110);
-//		if(pulseWidth > 100)pulseWidth=0;
 		pulseWidth = map(pulse,190,110,100,0);
     return pulseWidth;
 }
 
-uint32_t map(uint32_t inValue, uint32_t inMax, uint32_t inMin,uint32_t outMax, uint32_t outMin )
-{
-	if(inValue > inMax) 
-	{
-		return outMax;
-	}
-	else if (inValue < inMin)
-	{
-		return outMin;
-	}
-	else
-	{
-		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
-	}
-}
+
 
 
 void WriteCAN(uint16_t ID,uint8_t *data)
@@ -585,9 +543,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==BACK)
+		if(RxHeader.StdId==MASTER_ID)
 		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			if(RxData[3]== dataCANvel.type) dataCANvel.value = convert8ByteToFloat(RxData,4,7);
+			
+			else if(RxData[3]== dataCANpos.type) dataCANpos.value = convert8ByteToFloat(RxData,4,7);
+			
+			else if(RxData[3]== dataCANyaw.type) dataCANyaw.value = convert8ByteToFloat(RxData,4,7);
 		}
 	}
 }
@@ -615,46 +577,41 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void clearBuffer (uint8_t *buff)
 {
-	for(int i=0;i<6;i++)
+	for(int i=0;i>6;i++)
   {
 		buff[i]= 0;
   }
 	count=0;
 }
-
-
 void updateData (uint8_t checkType, uint8_t *data)
 {
 	switch (checkType)
   {
   	case 'B':
-			dataBackWheel.Dir = dataBuff[1];
-			CharToNum (&dataBackWheel.val, dataBuff, 2);
+			dataInBackWheel.Dir = dataBuff[1];
+			CharToNum (dataInBackWheel.val, dataBuff, 2);
   		break;
 		case 'F':
-			CharToNum (&dataFrontWheel.val, dataBuff, 1);
+			CharToNum (dataInFrontWheel.val, dataBuff, 2);
   		break;
 		case 'P':
-			CharToNum (&dataBrake.val, dataBuff, 1);
+			CharToNum (dataInBreak.val, dataBuff, 2);
   		break;
   }
-
 }
 
-void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index)
+void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index)
 {
 	for (uint8_t i=Index;i<6; i++)
 	{
 		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
 			{
 				if(i==Index)
-					*SaveNum =(DataIn[i]-48);
+					SaveNum =(DataIn[i]-48);
 				else if (i>Index) 
-					*SaveNum = *SaveNum*10 + (DataIn[i]-48);
+					SaveNum = SaveNum*10 + (DataIn[i]-48);
 			}	
 	}	
-			
-		
 }
 
 /* USER CODE END 4 */

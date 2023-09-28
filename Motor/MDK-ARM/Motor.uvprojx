@@ -405,6 +405,11 @@
               <FilePath>..\Core\Src\MCP4725_I2C.c</FilePath>
             </File>
             <File>
+              <FileName>convert_lib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\convert_lib.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>
