@@ -21,9 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "convert_lib.h"
 #include "CLCD_I2C.h"
-#include "math.h"
+
 #include "MCP4725_I2C.h"
 /* USER CODE END Includes */
 
@@ -130,7 +130,9 @@ void dc_motor_control(float setpoint, float input);
 float pid_controller(float setpoint, float input, float dt);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
-uint32_t convert8byteToInt(uint8_t *arr); 
+uint32_t convert8byteToInt(uint8_t *arr, uint8_t startByte, uint8_t stopByte); 
+void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte );
+float convert8ByteToFloat (uint8_t *arr, uint8_t startByte, uint8_t stopByte);
 float map(float inValue, float inMax, float inMin,float outMax, float outMin );
 uint16_t pwm_generation(float speed);
 /* USER CODE END PFP */
@@ -607,12 +609,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
 			last_encoderValue = encoderValue;	
 			
+
 			if(mode == AUTO) 
 			{
-				
-				WriteCAN(TxData);
 				dc_motor_control(10,posInMeter);
+				convertFloatTo8Byte(mps, TxData, 4, 7);
+				TxData[3] = 'V';
+				WriteCAN(MASTER_ID,TxData);
+				convertFloatTo8Byte(posInMeter, TxData, 4, 7);
+				TxData[3] = 'P';
+				WriteCAN(MASTER_ID,TxData);
+				
 			}
+
+
 			
     }
 }
@@ -682,32 +692,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	}
 	
 }
-uint32_t convert8byteToInt(uint8_t *arr)
-{
-	uint32_t result = 0;
-	for (int i = 0; i < 8; i++) 
-	{
-		result += arr[i] * pow(10, 7-i);
-	}
-	return result;
-}
 
-
-float map(float inValue, float inMax, float inMin,float outMax, float outMin )
-{
-	if(inValue > inMax) 
-	{
-		return outMax;
-	}
-	else if (inValue < inMin)
-	{
-		return outMin;
-	}
-	else
-	{
-		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
-	}
-}
 /* USER CODE END 4 */
 
 /**
