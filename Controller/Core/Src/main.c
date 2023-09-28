@@ -188,23 +188,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-<<<<<<< Updated upstream
-=======
-//		if (back_adc_p != dataInBackWheel.val){
-//			TxBack[7] = (uint8_t)dataInBackWheel.val;
-//			WriteCAN(BACK,TxBack);
-//		}
-//		
-//		if (front_adc_p != dataInFrontWheel.val){
-//			TxFront[7] = (uint8_t)dataInFrontWheel.val;
-//			WriteCAN(FRONT,TxFront);
-//		}
-//		
-//		if (brake_adc_p != dataInBrake.val){
-//			TxBrake[7] = (uint8_t)dataInBrake.val;
-//			WriteCAN(BRAKE,TxBrake);
-//		}
->>>>>>> Stashed changes
 		
 		
 		
@@ -562,7 +545,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	{
 		if(RxHeader.StdId==MASTER_ID)
 		{
-			HAL_GPIO_TogglePin(GPIOC,  GPIO_PIN_13);
 			if(RxData[3]== dataCANvel.type) dataCANvel.value = convert8ByteToFloat(RxData,4,7);
 			
 			else if(RxData[3]== dataCANpos.type) dataCANpos.value = convert8ByteToFloat(RxData,4,7);
