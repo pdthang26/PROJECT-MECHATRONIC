@@ -180,12 +180,12 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.AngleZ);
-		sprintf(lcdAcelY,"Y:%.2f ",Data.KalmanAngleY);
-		CLCD_I2C_SetCursor(&LCD1, 0,0);
-		CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-		CLCD_I2C_SetCursor(&LCD1, 0,1);
-		CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+//		sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.AngleZ);
+//		sprintf(lcdAcelY,"Y:%.2f ",Data.KalmanAngleY);
+//		CLCD_I2C_SetCursor(&LCD1, 0,0);
+//		CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+//		CLCD_I2C_SetCursor(&LCD1, 0,1);
+//		CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				
 
 		
@@ -441,7 +441,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }

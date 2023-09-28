@@ -170,36 +170,37 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>pulseWidthThro,0x0A</ItemText>
+          <ItemText>TxHeader</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>pulseWidthAile,0x0A</ItemText>
+          <ItemText>GPS_NEO</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>TxHeader</ItemText>
+          <ItemText>dataBuff</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>TxThro</ItemText>
+          <ItemText>dataCANvel</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>TxAile</ItemText>
+          <ItemText>dataCANpos</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>pulseWidthThroTest,0x0A</ItemText>
+          <ItemText>dataCANyaw</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
+<<<<<<< Updated upstream
           <ItemText>TxAile1</ItemText>
         </Ww>
         <Ww>
@@ -216,6 +217,9 @@
           <count>9</count>
           <WinNumber>1</WinNumber>
           <ItemText>GPS_NEO</ItemText>
+=======
+          <ItemText>RxHeader</ItemText>
+>>>>>>> Stashed changes
         </Ww>
       </WatchWindow1>
       <Tracepoint>
