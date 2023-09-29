@@ -6,6 +6,9 @@ import serial.tools.list_ports
 from PIL import ImageTk, Image
 import serial
 import os
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import threading
 
 # Đường dẫn tương đối của file
 
@@ -48,6 +51,12 @@ GUI_color = '#C9F4AA'
 
 # biến màu frame Manual
 manu_color = '#F7C8E0'
+
+# Tạo cửa sổ giao diện chính
+root = tk.Tk()
+root.geometry("1400x770")
+root.configure(bg=GUI_color)
+root.resizable(height=False, width=False)
 
 # Tạo mảng bao gồm các thành phần trên giao diện
 objects_1 = [] # mảng chứa các thành phần để active bằng nút manual
@@ -171,8 +180,19 @@ def connect_uart():
             # Xử lý lỗi mở cổng UART
             messagebox.showerror('Error', f'Failed to open COM port: {str(e)}')
 
-def show_click():
+# Khởi tạo biến cờ và đặt giá trị ban đầu là False
+update_flag = False
 
+angle_p = 0
+
+velocity_p = 0
+
+distance_p = 0
+
+# Hàm show các giá trị xe
+def show():
+
+    global angle_p, velocity_p, distance_p
     # Đọc dữ liệu uart 
     # đọc UART theo dòng decode dữ liệu là bỏ khoảng trắng và kí tự xuống dòng bên phải dữ liệu
     
@@ -186,21 +206,46 @@ def show_click():
     distance = dis_uart.readline().decode().strip()
        
     # Xử lý tính hiệu UART
-    if angle.startswith('A'):
-        angle_display['text']= angle[1:]
+    if angle.startswith('Y'):
+        angle_n = float(angle[1:])
+        if angle_p != angle_n:
+            angle_display['text']= angle[1:]
+            angle_p=angle_n
+
     if velocity.startswith('V'):
-        vel_display['text']= velocity[1:]
+        velocity_n = float(velocity[1:])
+        if velocity_p != velocity_n:
+            vel_display['text']= velocity[1:]
+            velocity_p = velocity_n
+
     if distance.startswith('D'):
-        dis_display['text']= distance[1:]
+        distance_n = float(distance[1:])
+        if distance_p != distance_n:
+            dis_display['text']= distance[1:]
+            distance_p = distance_n
+
+    # Kiểm tra biến cờ để quyết định liệu có tiếp tục cập nhật hay không
+    if update_flag:
+        root.after(200, show)
+
+# Hàm nhấn nút show value
+def show_click():
+    global update_flag
+    update_flag = True
+    show()
 
 #Hàm cho nút Disconnect
 def disconnect_uart():
+    
+    global update_flag
+
+    update_flag = False
 
     for obj in objects_1+objects_2:
         obj['state'] = 'disabled'
-    for obj in objects_3:
-        obj.set('')
-    
+
+    com_port['text']=''
+
     #Ngắt UART
     if b_uart.is_open:
         b_uart.close()
@@ -231,12 +276,6 @@ def close_click():
     result = messagebox.askyesno("Exit", "Do you want to exit?")
     if result:
         root.destroy()
-
-# Tạo cửa sổ giao diện chính
-root = tk.Tk()
-root.geometry("1060x600")
-root.configure(bg=GUI_color)
-root.resizable(height=False, width=False)
 
 '''Tạo các nhãn'''
 
@@ -272,18 +311,6 @@ angle_display.place(x=680,y=30,height=30,width=130)
 ang_unit = tk.Label(root,text = '\u00B0',bg=GUI_color,font=('Arial',15,'bold'))
 ang_unit.place(x=815,y=30)
 
-# Tạo nhãn cho Speed
-vel_label = tk.Label(root,text='Speed',bg=GUI_color)
-vel_label.place(x= 680,y=65 )
-
-#Tạo ô hiển thị Speed
-vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white',font=('Arial',13,'bold'))
-vel_display.place(x=680,y=90,width=130,height=30)
-
-# Tạo nhãn đơn vị cho tốc độ
-speed_unit = tk.Label(root,text='m/s',bg=GUI_color,font=('Arial',13))
-speed_unit.place(x=815,y=90)
-
 #Tạo nhãn cho Distance
 dis_label = tk.Label(root,text='Distance',bg=GUI_color)
 dis_label.place(x= 880,y=5)
@@ -295,6 +322,18 @@ dis_display.place(x=880,y=30,height=30,width=130)
 #Tạo nhãn hiển thị đơn vị cho Distance
 dis_unit =tk.Label(root,text='m',bg=GUI_color,font=('Arial',13))
 dis_unit.place(x=1015,y=30)
+
+# Tạo nhãn cho Speed
+vel_label = tk.Label(root,text='Speed',bg=GUI_color)
+vel_label.place(x=1090,y=5 )
+
+#Tạo ô hiển thị Speed
+vel_display= tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white',font=('Arial',13,'bold'))
+vel_display.place(x=1090,y=30,width=130,height=30)
+
+# Tạo nhãn đơn vị cho tốc độ
+speed_unit = tk.Label(root,text='m/s',bg=GUI_color,font=('Arial',13))
+speed_unit.place(x=1225,y=30)
 
 #Tạo nhãn cho status
 status_label = tk.Label(root,text='UART status',bg=GUI_color)
@@ -349,15 +388,15 @@ btn_close.place(x=90, y=30, height=30, width=70)
 
 # Tạo nút kết nối UART
 connect_button = tk.Button(root, text="Connect", state='disabled', command=connect_uart,bg='white')
-connect_button.place(x=540, y=30, height=30, width=100)
+connect_button.place(x=540, y=30, height=30, width=80)
 
 # Tạo nút ngắt UART 
 disconnect_button = tk.Button(root,text='Disconnect',state ='disabled',bg='white',command=disconnect_uart)
-disconnect_button.place(x=540,y=90,height=30,width=100)
+disconnect_button.place(x=540,y=90,height=30,width=80)
 
 # Tạo nút Show value
-show_button = tk.Button(root,text = 'Show Car Value',state= 'disabled',bg='white',command=show_click)
-show_button.place(x= 880,y=90,height=30,width=130)
+show_button = tk.Button(root,text = 'Show Value',state= 'disabled',bg='white',command=show_click)
+show_button.place(x= 680,y=90,height=30,width=80)
 objects_2.append(show_button)
 
 # Frame Status Uart
@@ -378,6 +417,14 @@ btn_auto = tk.Button(root, text='Auto', state='disabled',bg='white')
 btn_auto.place(x=10, y=90, height=30, width=70)
 objects_2.append(btn_auto)
 
+# Tạo nhãn cho Auto 
+auto_fr_label = tk.Label(root,text = 'Auto Control',bg = GUI_color, font=('Arial',16,'bold'))
+auto_fr_label.place(x= 10, y = 455)
+
+# Tạo nhãn cho Auto Frame
+auto_frame = tk.Frame(root,height=265,width=530,highlightthickness=2,highlightbackground='#241468',bg=manu_color)
+auto_frame.place(x=10,y=495)
+
 ''' Chức năng manual'''
 # Hàm chức năng cho nút Manual
 def manual_click():
@@ -391,11 +438,11 @@ objects_2.append(btn_manu)
 
 # Tạo nhãn cho manu frame
 manu_fr_label = tk.Label(root,text='Manual Control', bg=GUI_color,font=('Arial',16,'bold'))
-manu_fr_label.place(x=10,y=150)
+manu_fr_label.place(x=10,y=130)
 
 '''Tạo frame cho Manual Control'''
-manu_frame = tk.Frame(root,width =530,height=395, highlightbackground='#241468',highlightthickness=2,bg=manu_color )
-manu_frame.place(x= 10, y= 190)
+manu_frame = tk.Frame(root,width =530,height=265, highlightbackground='#241468',highlightthickness=2,bg=manu_color )
+manu_frame.place(x= 10, y= 170)
 
 # Tạo nhãn cho di chuyển trước và sau
 back_wheel_label = tk.Label(manu_frame,text='Back Wheel Control',bg=manu_color,font=('Arial',12,'bold'))
@@ -632,9 +679,101 @@ def ma_em_click():
 manu_emer = PhotoImage(file = emergency_stop)
 
 # Emergency Stop button for manual mode creation
-manu_emer_button = tk.Button(manu_frame,image = manu_emer, bg= manu_color, borderwidth=0, state='disabled',command = ma_em_click )
-manu_emer_button.place(x=225, y=275, width=100, height=100)
+manu_emer_button = tk.Button(auto_frame,image = manu_emer, bg= manu_color, borderwidth=0, state='disabled',command = ma_em_click )
+manu_emer_button.place(x=420, y=10, width=100, height=100)
 objects_1.append(manu_emer_button)
+
+# Khởi tạo đồ thị
+fig = Figure()
+
+ax1 = fig.add_subplot(2, 1, 1)
+ax1.set_title('Car Trajectory')
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Angle')
+ax1.grid(True)
+ax1.set_xlim(0, 100)
+ax1.set_ylim(-190, 190)       
+line1, = ax1.plot([], [], 'g')
+
+
+ax2 = fig.add_subplot(2,1,2)
+ax2.set_title('Car Position')
+ax2.set_xlabel('Longitude')
+ax2.set_ylabel('Lattitude')
+ax2.grid(True)
+line2, = ax2.plot([], [], 'r')
+
+
+# Khởi tạo canvas để hiển thị đồ thị
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas.get_tk_widget().place(x=580, y=170, height=590, width=750)
+
+# Điều chỉnh vị trí của đồ thị
+fig.tight_layout()
+
+# Mảng lưu các giá trị angles
+angles = []
+
+# Biến cờ cho đồ thị
+run = False
+
+# Hàm cập nhật dữ liệu nối tiếp và vẽ đồ thị
+def update_plot():
+    global run
+
+    if run==True:
+        # Đọc dữ liệu từ vi điều khiển qua UART
+        data = ang_uart.readline().decode().strip()
+        if data.startswith('Y'):
+            angle = float(data[1:])
+        
+        # Kiểm tra nếu danh sách angles có quá nhiều giá trị, chỉ giữ lại 100 giá trị gần nhất
+            if len(angles) < 100:
+                # Thêm giá trị mới vào danh sách
+                angles.append(angle)
+            else:
+                angles.pop(0)  # Xóa phần tử đầu tiên
+                angles.append(angle)  # Thêm giá trị mới vào cuối danh sách
+        
+        # Xóa dữ liệu cũ trên đồ thị
+        ax1.clear()
+        
+        # Vẽ đồ thị
+        ax1.plot(range(len(angles)), angles, 'g')
+        ax1.set_title('Car Trajectory')
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Angle')
+        ax1.grid(True)
+        ax1.set_xlim(0, 100)
+        ax1.set_ylim(-190, 190)
+        
+        # Cập nhật đồ thị
+        canvas.draw()
+    
+    # Gọi lại hàm update_plot mỗi 100ms
+    root.after(100, update_plot)
+
+# Hàm cho nút Start
+def start_click():
+    global run
+    run = True
+
+# Nút start vẽ đồ thị 
+start_btn = tk.Button(root, text = 'Start',bg='white',command = start_click,state='disabled')
+start_btn.place(x=770,y = 90,height=30,width=80)
+objects_2.append(start_btn)
+
+def stop_click():
+    global run
+    run = False
+
+# Nút Stop vẽ đồ thị
+stop_btn = tk.Button(root,text ='Stop',bg='white',command=stop_click,state='disabled')
+stop_btn.place(x =855,y=90,height=30,width=80 )
+objects_2.append(stop_btn)
+
+# Gọi hàm update_plot để bắt đầu cập nhật và vẽ đồ thị
+update_plot()
 
 # Chạy vòng lặp giao diện
 root.mainloop()
