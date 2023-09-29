@@ -216,7 +216,7 @@ int main(void)
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);
 		
-		sprintf(vido,"Lat:%.6f",GPS_NEO.dec_latitude);
+		sprintf(vido," %.2f ", dataCANpos.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,vido);
 	

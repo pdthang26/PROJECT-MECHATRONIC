@@ -23,34 +23,30 @@ void convertUint32_tTo8byte(uint32_t value, uint8_t *arr, uint8_t startByte, uin
 	}
 }
 
-void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte)
-{
-	uint8_t j = 3;
-	uint32_t num;
-	memcpy(&num,&value,4);
-	
-	for (int i = startByte; i <= stopByte; i++) 
-	{
-		arr[i] = (num >> (8 * j)) & 0xFF;
-		j--;
-	}
+void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte) {
+    uint8_t j = stopByte - startByte;
+    uint32_t num;
+    memcpy(&num, &value, sizeof(value));
+    
+    for (int i = startByte; i <= stopByte; i++) {
+        arr[i] = (num >> (8 * j)) & 0xFF;
+        j--;
+    }
 }
 
+float convert8ByteToFloat(uint8_t *arr, uint8_t startByte, uint8_t stopByte) {
+    uint8_t j = stopByte - startByte;
+    uint32_t value = 0;
+    
+    for (int i = startByte; i <= stopByte; i++) {
+        value |= ((uint32_t)arr[i] << (8 * j));
+        j--;
+    }
 
+    float num;
+    memcpy(&num, &value, sizeof(num));
 
-float convert8ByteToFloat (uint8_t *arr, uint8_t startByte, uint8_t stopByte)
-{
-	uint8_t j = 3;
-	float num;
-	uint32_t value;
-	
-	for (int i = startByte; i <= stopByte; i++) 
-	{
-		value |= ((uint32_t)arr[i] << (8 * j));
-		j--;
-  }
-	memcpy(&num,&value,4);
-	return num;
+    return num;
 }
 
 

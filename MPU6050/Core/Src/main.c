@@ -120,7 +120,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
   * @retval int
   */
 int main(void)
-
 {
   /* USER CODE BEGIN 1 */
 
@@ -156,8 +155,6 @@ int main(void)
 	HAL_TIM_Base_Start(&htim1);
 	HAL_TIM_Base_Start_IT(&htim2);
 	
-	CLCD_I2C_Init(&LCD1,&hi2c1,0x4E,16,2);
-	
 	// Initial CAN protocol
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -168,8 +165,6 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 	
-	
-	//alpha = sampleTime/(N+sampleTime);
 	
 	
 	MPU6050_Init(&hi2c1);
@@ -182,15 +177,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
-//		sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.AngleZ);
-//		sprintf(lcdAcelY,"Y:%.2f ",Data.KalmanAngleY);
-//		CLCD_I2C_SetCursor(&LCD1, 0,0);
-//		CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-//		CLCD_I2C_SetCursor(&LCD1, 0,1);
-//		CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-				
-
 		
 	}
 		
