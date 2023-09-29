@@ -27,7 +27,7 @@ void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t s
 {
 	uint8_t j = 3;
 	uint32_t num;
-	memcpy(&num,&value,sizeof(value));
+	memcpy(&num,&value,4);
 	
 	for (int i = startByte; i <= stopByte; i++) 
 	{

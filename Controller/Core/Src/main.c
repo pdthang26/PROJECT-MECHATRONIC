@@ -195,24 +195,24 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		if (back_adc_p != dataInBackWheel.val){
-			TxBack[7] = (uint8_t)dataInBackWheel.val;
-			WriteCAN(BACK,TxBack);
-		}
+//		if (back_adc_p != dataInBackWheel.val){
+//			TxBack[7] = (uint8_t)dataInBackWheel.val;
+//			WriteCAN(BACK,TxBack);
+//		}
+//		
+//		if (front_adc_p != dataInFrontWheel.val){
+//			TxFront[7] = (uint8_t)dataInFrontWheel.val;
+//			WriteCAN(FRONT,TxFront);
+//		}
+//		
+//		if (brake_adc_p != dataInBrake.val){
+//			TxBrake[7] = (uint8_t)dataInBrake.val;
+//			WriteCAN(BRAKE,TxBrake);
+//		}
 		
-		if (front_adc_p != dataInFrontWheel.val){
-			TxFront[7] = (uint8_t)dataInFrontWheel.val;
-			WriteCAN(FRONT,TxFront);
-		}
-		
-		if (brake_adc_p != dataInBrake.val){
-			TxBrake[7] = (uint8_t)dataInBrake.val;
-			WriteCAN(BRAKE,TxBrake);
-		}
 		
 		
-		
-		sprintf(kinhdo,"Long:%.6f",GPS_NEO.dec_longitude);
+		sprintf(kinhdo,"Long:%.6f",dataCANyaw.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);
 		
@@ -566,6 +566,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	{
 		if(RxHeader.StdId==MASTER_ID)
 		{
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			if(RxData[3]== dataCANvel.type) dataCANvel.value = convert8ByteToFloat(RxData,4,7);
 			
 			else if(RxData[3]== dataCANpos.type) dataCANpos.value = convert8ByteToFloat(RxData,4,7);

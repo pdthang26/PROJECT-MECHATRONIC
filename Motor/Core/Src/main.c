@@ -613,15 +613,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			if(mode == AUTO) 
 			{
 				dc_motor_control(10,posInMeter);
-				convertFloatTo8Byte(mps, TxData, 4, 7);
-				TxData[3] = 'V';
-				WriteCAN(MASTER_ID,TxData);
-				convertFloatTo8Byte(posInMeter, TxData, 4, 7);
-				TxData[3] = 'P';
-				WriteCAN(MASTER_ID,TxData);
-				
 			}
-
+			convertFloatTo8Byte(mps, TxData, 4, 7);
+			TxData[3] = 'V';
+			WriteCAN(MASTER_ID,TxData);
+			convertFloatTo8Byte(posInMeter, TxData, 4, 7);
+			TxData[3] = 'P';
+			WriteCAN(MASTER_ID,TxData);
 
 			
     }
