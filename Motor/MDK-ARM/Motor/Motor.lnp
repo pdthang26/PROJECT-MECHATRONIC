@@ -1,6 +1,8 @@
 --cpu Cortex-M3
 "motor\startup_stm32f103xb.o"
 "motor\clcd_i2c.o"
+"motor\mcp4725_i2c.o"
+"motor\convert_lib.o"
 "motor\main.o"
 "motor\stm32f1xx_it.o"
 "motor\stm32f1xx_hal_msp.o"

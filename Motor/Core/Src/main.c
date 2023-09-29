@@ -21,19 +21,23 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "convert_lib.h"
 #include "CLCD_I2C.h"
-#include "math.h"
+
+#include "MCP4725_I2C.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define diameter            0.4 //(m)
-#define PI                  3.14159
-#define MASTER_ID      			0x281
-#define SLAVE_ID1   				0x012
-#define SLAVE_ID2   				0x274
-#define BRAKE 							0x222
+#define diameter                0.4 //(m)
+#define PI                      3.14159
+#define MASTER_ID      			    0x281
+#define BACK_WHEEL_ID  				  0x012
+#define FRONT_WHEEL_ID  				0x274
+#define BRAKE 							    0x222
+
+#define AUTO   							    0x01
+#define MANUAL 							    0x02
 
 /* USER CODE END PTD */
 
@@ -55,7 +59,6 @@ I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 //LCD variable
@@ -64,7 +67,8 @@ float adcValue;
 float throValue;
 char row1[16];
 char row2[16];
-
+// MCP4725 variable
+MCP4725_I2C MCP4725;
 
 
 
@@ -84,7 +88,7 @@ int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 156; // pulse per revolution
+const float pulsesPerRevolution = 312; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -106,10 +110,8 @@ double alpha, beta, gamma;
 double Output, LastOutput;
 
 // Khai bao bien cho PWM
-uint16_t pwm_value = 0;
-float test = 0;
-float setSpeed = 0.0;    // expected speed (m/s)
-
+uint16_t DAC_value = 0; 
+uint8_t mode =0;
 uint8_t btnState;
 
 /* USER CODE END PV */
@@ -119,7 +121,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_CAN_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C2_Init(void);
@@ -129,7 +130,9 @@ void dc_motor_control(float setpoint, float input);
 float pid_controller(float setpoint, float input, float dt);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
-uint32_t convert8byteToInt(uint8_t *arr); 
+uint32_t convert8byteToInt(uint8_t *arr, uint8_t startByte, uint8_t stopByte); 
+void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte );
+float convert8ByteToFloat (uint8_t *arr, uint8_t startByte, uint8_t stopByte);
 float map(float inValue, float inMax, float inMin,float outMax, float outMin );
 uint16_t pwm_generation(float speed);
 /* USER CODE END PFP */
@@ -169,19 +172,21 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_CAN_Init();
   MX_ADC1_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
 	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
+//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13,1);
 	
 	//LCD
 	HAL_ADC_Start(&hadc1);
 	CLCD_I2C_Init(&LCD1,&hi2c2,0x4E,16,2);
+	
+	// init MCP4725 DAC
+	MCP4725_I2C_Init(&MCP4725, &hi2c2, 0xC0, WRITE_DAC_REG_ONLY, POW_DOWN_NOMAL);
 	
 	//initial CAN protocol
 	HAL_CAN_Start(&hcan);
@@ -193,6 +198,8 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 	
+	
+	MCP4725_I2C_SetValueDAC(&MCP4725, 0);// set initial value of DAC is 0
 	
 
   /* USER CODE END 2 */
@@ -210,15 +217,17 @@ while (1)
 		if((btnState>>3&0x01) == 0)
 		{
 			throValue = (float)RxDataThro[7];
-			setSpeed = map(throValue,100,30,200,0);
-			dc_motor_control(setSpeed,rpm);
+			mode = AUTO;
+			sprintf(row1,"dis:%.2f  ", posInMeter);
+			sprintf(row2,"encoder:%.2f  ",mps);
 		}
 		else if((btnState>>2&0x01) == 0)
-		{				
+		{			
+			mode = MANUAL;
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-			pwm_value = adcValue*65535;
-			sprintf(row1,"ADC:%.1f %d ",adcValue, pwm_value);
-			sprintf(row2,"encoder:%.2f",mps);
+			DAC_value = adcValue*4095;
+			sprintf(row1,"ADC:%.1f %d ",adcValue, DAC_value);
+			sprintf(row2,"encoder:%d",encoderValue);
 			
 			if((btnState>>1&0x01) == 0)
 			{
@@ -230,7 +239,8 @@ while (1)
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
 				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
 			}
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
+			MCP4725_I2C_SetValueDAC(&MCP4725, DAC_value);
+			
 		}
 		
 		
@@ -239,12 +249,7 @@ while (1)
 		CLCD_I2C_WriteString(&LCD1,row1);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,row2);
-		
-		
-//		pwm_value = pwm_generation(setSpeed);
-    
-		
-//		
+			
 		
   }
   /* USER CODE END 3 */
@@ -522,65 +527,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 0;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 65535;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
-  HAL_TIM_MspPostInit(&htim4);
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -660,8 +606,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
-			posInMeter = encoderValue / pulsesPerRevolution * diameter * PI;
-			last_encoderValue = encoderValue;		
+			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
+			last_encoderValue = encoderValue;	
+			
+
+			if(mode == AUTO) 
+			{
+				dc_motor_control(10,posInMeter);
+				convertFloatTo8Byte(mps, TxData, 4, 7);
+				TxData[3] = 'V';
+				WriteCAN(MASTER_ID,TxData);
+				convertFloatTo8Byte(posInMeter, TxData, 4, 7);
+				TxData[3] = 'P';
+				WriteCAN(MASTER_ID,TxData);
+				
+			}
+
+
+			
     }
 }
 
@@ -684,32 +646,23 @@ float pid_controller(float setpoint, float input, float dt)
 	return Output;
 }
 
-//uint16_t pwm_generation (float speed){
-//	uint16_t pwm;
-// pwm = -611.82* pow(speed,2)+8859.2*speed+28633;
-// return pwm;
-//}
+
 
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
 {
-    output = pid_controller(setpoint, input, sampleTime);
-    // gioi han gia tri pwm trong khoang 0 den 1
-    if (output > 0.0)
+		if(input<setpoint)
 		{
-			pwm_value = output*0.01*65535;
 			TxData[7] = 0;
 			WriteCAN(BRAKE,TxData);
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
+			MCP4725_I2C_SetValueDAC(&MCP4725, 2300);
 		}
-    else if (output <=0.0)
+		else if (input>=setpoint)
 		{
-			TxData[7] = -output;
+			MCP4725_I2C_SetValueDAC(&MCP4725, 0);
+			TxData[7] = 100;
 			WriteCAN(BRAKE,TxData);
-			pwm_value = 0;
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
-		}
-    
+    }
 }
 
 void WriteCAN(uint16_t ID,uint8_t *data)
@@ -731,7 +684,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
-		if(RxHeader.StdId==SLAVE_ID1)
+		if(RxHeader.StdId==BACK_WHEEL_ID)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			RxDataThro[7]=RxData[7];
@@ -739,32 +692,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	}
 	
 }
-uint32_t convert8byteToInt(uint8_t *arr)
-{
-	uint32_t result = 0;
-	for (int i = 0; i < 8; i++) 
-	{
-		result += arr[i] * pow(10, 7-i);
-	}
-	return result;
-}
 
-
-float map(float inValue, float inMax, float inMin,float outMax, float outMin )
-{
-	if(inValue > inMax) 
-	{
-		return outMax;
-	}
-	else if (inValue < inMin)
-	{
-		return outMin;
-	}
-	else
-	{
-		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
-	}
-}
 /* USER CODE END 4 */
 
 /**

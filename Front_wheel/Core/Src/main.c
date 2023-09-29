@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "CLCD_I2C.h"
+#include "convert_lib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -113,7 +114,7 @@ uint16_t pwm_value = 0;
 uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
 float setpoint = 0;
-
+uint32_t valueIn = 0;
 
 
 /* USER CODE END PV */
@@ -133,6 +134,7 @@ void dc_motor_control(float setpoint, float input);
 float pid_controller(float setpoint, float input);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -221,17 +223,14 @@ int main(void)
 			case AUTO:
 				if(changeMode!=mode)
 				{
-					
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
-					
 					HAL_Delay(2000);
 					changeMode=mode;
 				}
-				aileValue = (float) RxDataAile[7];
-				setpoint=0.01*aileValue*19000;
-				sprintf(lcdRPM,"controll:%.1f ",aileValue);
+				setpoint = valueIn;
+				sprintf(lcdRPM,"controll:%.1f ",setpoint);
 				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
@@ -247,7 +246,6 @@ int main(void)
 					changeMode=mode;
 					HAL_Delay(2000);
 				}
-				CLCD_I2C_Clear(&LCD1);
 				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
@@ -258,33 +256,13 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
-//				if((btnState&0x01) ==0)
-//				{
-//					pwmValueCW = (uint16_t)(65535 * adcValue);
-//					pwmValueCCW = 0;
-//					
-//				}
-//				else if((btnState>>1&0x01) ==0)
-//				{				
-//					pwmValueCW = 0;
-//					pwmValueCCW = (uint16_t)(65535 * adcValue);
-//				}
-//				else 
-//				{
-//					pwmValueCW = 0;
-//					pwmValueCCW = 0;
-//				}
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-
-
-				if(aileValue >75)
+				if((btnState&0x01) ==0)
 				{
 					pwmValueCW = (uint16_t)(65535 * adcValue);
 					pwmValueCCW = 0;
 					
 				}
-				else if(aileValue <15)
+				else if((btnState>>1&0x01) ==0)
 				{				
 					pwmValueCW = 0;
 					pwmValueCCW = (uint16_t)(65535 * adcValue);
@@ -296,6 +274,8 @@ int main(void)
 				}
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+
+
 				break;
 		}
 		
@@ -726,8 +706,6 @@ float pid_controller(float setpoint, float input) {
 
     // Luu tr? sai s? và tích phân
     
-    
-	
 		if (output > 100)
         output = 100;
     else if (output < - 100)
@@ -796,12 +774,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==SLAVE_ID2)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			RxDataAile[7]=RxData[7];
+			valueIn = convert8byteToUint32_t(RxData, 4,7);
 		}
 	}
-	
 }
-
 
 /* USER CODE END 4 */
 

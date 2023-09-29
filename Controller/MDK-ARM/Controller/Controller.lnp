@@ -2,6 +2,7 @@
 "controller\startup_stm32f103xb.o"
 "controller\clcd_i2c.o"
 "controller\gps.o"
+"controller\convert_lib.o"
 "controller\main.o"
 "controller\stm32f1xx_it.o"
 "controller\stm32f1xx_hal_msp.o"

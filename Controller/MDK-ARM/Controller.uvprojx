@@ -405,6 +405,11 @@
               <FilePath>..\Core\Src\gps.c</FilePath>
             </File>
             <File>
+              <FileName>convert_lib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\convert_lib.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>
@@ -688,5 +693,14 @@
     </components>
     <files/>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>Controller</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>
