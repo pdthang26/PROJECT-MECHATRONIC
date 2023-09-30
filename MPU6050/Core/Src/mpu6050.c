@@ -244,7 +244,7 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     DataStruct->KalmanAngleX = Kalman_getAngle(&KalmanX, roll, DataStruct->Gx, dt);
 		
 
-    yaw +=(double) (DataStruct->Gz+1.5)*dt*2;
+    yaw +=(((double)DataStruct->Gz)+1.44)*dt*2;
 
 
 		DataStruct->AngleZ = Kalman_getAngle(&KalmanZ, yaw, DataStruct->Gz, dt);
