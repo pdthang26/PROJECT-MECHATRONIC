@@ -150,7 +150,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	// start analog to digital convert
 
-	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);
+
   //Start timer
 	HAL_TIM_Base_Start(&htim1);
 	HAL_TIM_Base_Start_IT(&htim2);
@@ -166,8 +166,8 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
+	while(MPU6050_Init(&hi2c1)){	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);}
 	
-	MPU6050_Init(&hi2c1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -372,9 +372,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 799;
+  htim2.Init.Prescaler = 1079;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 899;
+  htim2.Init.Period = 999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -430,7 +430,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
@@ -439,7 +439,6 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-
 	if (GPIO_Pin==GPIO_PIN_5)
 	{		
 		MPU6050_Read_All(&hi2c1, &Data);

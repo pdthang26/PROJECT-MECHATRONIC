@@ -126,7 +126,7 @@ static void MX_ADC1_Init(void);
 static void MX_I2C2_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-void dc_motor_control(float setpoint, float input);
+void dc_motor_control(float setpoint, float input, char dir);
 float pid_controller(float setpoint, float input, float dt);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
@@ -612,7 +612,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 			if(mode == AUTO) 
 			{
-				dc_motor_control(10,posInMeter);
+				dc_motor_control(RxDataThro[7],posInMeter,RxDataThro[6]);
 			}
 			convertFloatTo8Byte(mps, TxData, 4, 7);
 			TxData[3] = 'V';
@@ -647,18 +647,29 @@ float pid_controller(float setpoint, float input, float dt)
 
 
 // dieu khien dong co dua tren pid
-void dc_motor_control(float setpoint, float input)
+void dc_motor_control(float setpoint, float input, char dir)
 {
-		if(input<setpoint)
+		switch (dir)
 		{
-			TxData[7] = 0;
-			WriteCAN(BRAKE,TxData);
-			MCP4725_I2C_SetValueDAC(&MCP4725, 2300);
+			case 'T':
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,1);
+				break;
+			case 'L':
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
+				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
+				break;
 		}
-		else if (input>=setpoint)
+		if(setpoint==0)
 		{
 			MCP4725_I2C_SetValueDAC(&MCP4725, 0);
 			TxData[7] = 100;
+			WriteCAN(BRAKE,TxData);
+		}
+		else 
+		{
+			MCP4725_I2C_SetValueDAC(&MCP4725, 3000);
+			TxData[7] = 0;
 			WriteCAN(BRAKE,TxData);
     }
 }
@@ -685,7 +696,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==BACK_WHEEL_ID)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			RxDataThro[7]=RxData[7];
+			RxDataThro[7] = RxData[7];
+			RxDataThro[6] = RxData[6];
 		}
 	}
 	
