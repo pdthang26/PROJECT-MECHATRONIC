@@ -51,6 +51,7 @@ CAN_HandleTypeDef hcan;
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
@@ -67,6 +68,7 @@ uint32_t brake_adc_p = 0;
 uint8_t count;
 uint8_t buffer;
 uint8_t dataBuff[6];
+char data[20];
 
 typedef struct 
 {
@@ -117,9 +119,11 @@ static void MX_CAN_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 void WriteCAN(uint16_t ID,uint8_t *data);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
 uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
@@ -168,6 +172,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_USART3_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
 	HAL_TIM_Base_Start(&htim2);
@@ -181,10 +186,9 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
-	
-	
-	GPS_Init(&GPS1,&huart1);
 	HAL_UART_Receive_IT(&huart3, &buffer, 1);
+	HAL_TIM_Base_Start_IT(&htim3);
+	GPS_Init(&GPS1,&huart1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -393,6 +397,51 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 1079;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -441,7 +490,7 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 9600;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
@@ -574,6 +623,21 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 			else if(RxData[3]== dataCANyaw.type) dataCANyaw.value = convert8ByteToFloat(RxData,4,7);
 		}
 	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* Prevent unused argument(s) compilation warning */
+  if(htim -> Instance == TIM3){
+		
+		sprintf(data,"D%.1f\n",dataCANpos.value);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data,sizeof(data),HAL_MAX_DELAY);
+	
+	}
+
+  /* NOTE : This function should not be modified, when the callback is needed,
+            the HAL_TIM_PeriodElapsedCallback could be implemented in the user file
+   */
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
