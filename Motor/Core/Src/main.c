@@ -218,16 +218,16 @@ while (1)
 		{
 			throValue = (float)RxDataThro[7];
 			mode = AUTO;
-			sprintf(row1,"dis:%.2f  ", posInMeter);
-			sprintf(row2,"encoder:%.2f  ",mps);
+			sprintf(row1,"dis:%.2f       ", posInMeter);
+			sprintf(row2,"vel:%.2f       ",mps);
 		}
 		else if((btnState>>2&0x01) == 0)
 		{			
 			mode = MANUAL;
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
-			sprintf(row1,"DAC:%.1f %d ",adcValue, DAC_value);
-			sprintf(row2,"POS:%f ",posInMeter);
+			sprintf(row1,"DAC:%.1f %d    ",adcValue, DAC_value);
+			sprintf(row2,"POS:%.4f       ",posInMeter);
 			
 			if((btnState>>1&0x01) == 0)
 			{

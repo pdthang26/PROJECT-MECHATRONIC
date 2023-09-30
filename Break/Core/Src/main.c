@@ -216,8 +216,43 @@ int main(void)
 					HAL_Delay(2000);
 					changeMode=mode_1;
 				}
-				pwm_value=RxDataBreak[7]*0.01*20000;
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
+				sprintf(lcdAcelY,"Y:%d          ",RxDataBreak[7]);
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+				if(RxDataBreak[7]==0)
+				{
+					if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
+					{
+						while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+						{
+							pwmValueCW = 0;
+							pwmValueCCW = 33000;
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+						}
+						
+						pwmValueCW = 0;
+						pwmValueCCW = 0;
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+					
+					}
+					
+					else
+					{
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 23000);
+					}
+					
+				}
+				else
+				{
+					pwm_value=RxDataBreak[7]*0.01*20000;
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+				}
+				
 				break;
 			case MANUAL:
 				if(changeMode!=mode_1){
@@ -230,7 +265,7 @@ int main(void)
 				}
 //				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.Ax,Data.Az);
+				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
 				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
