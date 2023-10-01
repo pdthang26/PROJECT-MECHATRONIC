@@ -153,7 +153,7 @@ int main(void)
 
   //Start timer
 	HAL_TIM_Base_Start(&htim1);
-	HAL_TIM_Base_Start_IT(&htim2);
+	
 	
 	// Initial CAN protocol
 	HAL_CAN_Start(&hcan);
@@ -165,7 +165,7 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 	
-	
+	HAL_Delay(1000);
 	while(MPU6050_Init(&hi2c1)){	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);}
 	
   /* USER CODE END 2 */
@@ -430,7 +430,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
@@ -441,6 +441,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin==GPIO_PIN_5)
 	{		
+		if(cnt < 3000 )
+		{
+			MPU6050_Calculation_offset_Gryo(&hi2c1, &Data);
+			cnt++;
+			if(cnt==3000)
+			{
+				Data.gyroZoffset = Data.gyroZoffset/3000.0;
+				HAL_TIM_Base_Start_IT(&htim2);
+			}
+		}
+		else
 		MPU6050_Read_All(&hi2c1, &Data);
 	}
 }
