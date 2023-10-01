@@ -64,7 +64,7 @@ TIM_HandleTypeDef htim3;
 //LCD variable
 CLCD_I2C_Name LCD1;
 float adcValue;
-float throValue;
+uint8_t throValue;
 char row1[16];
 char row2[16];
 // MCP4725 variable
@@ -216,9 +216,9 @@ while (1)
 							|HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_0)<<1|HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1);
 		if((btnState>>3&0x01) == 0)
 		{
-			throValue = (float)RxDataThro[7];
+			throValue = RxDataThro[7];
 			mode = AUTO;
-			sprintf(row1,"dis:%.2f       ", posInMeter);
+			sprintf(row1,"dis:%.2f :%d", posInMeter,throValue);
 			sprintf(row2,"vel:%.2f       ",mps);
 		}
 		else if((btnState>>2&0x01) == 0)
@@ -227,7 +227,7 @@ while (1)
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
 			sprintf(row1,"DAC:%.1f %d    ",adcValue, DAC_value);
-			sprintf(row2,"POS:%.4f       ",posInMeter);
+			sprintf(row2,"POS:%.4f   ",posInMeter);
 			
 			if((btnState>>1&0x01) == 0)
 			{
@@ -663,6 +663,8 @@ void dc_motor_control(float setpoint, float input, char dir)
 		if(setpoint==0)
 		{
 			MCP4725_I2C_SetValueDAC(&MCP4725, 0);
+			if(mps ==0) TxData[6] = 'S';
+			else TxData[6] = 'R';
 			TxData[7] = 100;
 			WriteCAN(BRAKE,TxData);
 		}

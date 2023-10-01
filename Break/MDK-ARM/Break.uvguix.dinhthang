@@ -1865,9 +1865,15 @@
       <ActiveTab>0</ActiveTab>
       <Doc>
         <Name>../Core/Src/main.c</Name>
+<<<<<<< Updated upstream
         <ColumnNumber>8</ColumnNumber>
         <TopLine>220</TopLine>
         <CurrentLine>236</CurrentLine>
+=======
+        <ColumnNumber>10</ColumnNumber>
+        <TopLine>224</TopLine>
+        <CurrentLine>239</CurrentLine>
+>>>>>>> Stashed changes
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>

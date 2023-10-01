@@ -224,8 +224,6 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(RxDataBreak[7]==0)
 				{
-					if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
-					{
 						while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
 						{
 							pwmValueCW = 0;
@@ -239,18 +237,38 @@ int main(void)
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 					
-					}
-					
-					else
-					{
-						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 23000);
-					}
-					
 				}
 				else
 				{
-					pwm_value=RxDataBreak[7]*0.01*20000;
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+					if(RxDataBreak[6] == 'r')
+					{
+						pwm_value=RxDataBreak[7]*0.01*20000;
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+					}
+					else if (RxDataBreak[6] == 's')
+					{
+						if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
+						{
+							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+							{
+								pwmValueCW = 0;
+								pwmValueCCW = 33000;
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							}
+							
+							pwmValueCW = 0;
+							pwmValueCCW = 0;
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+						
+						}
+						
+						else
+						{
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 23000);
+						}
+					}
 				}
 				
 				break;
@@ -263,7 +281,6 @@ int main(void)
 					HAL_Delay(2000);
 					CLCD_I2C_Clear(&LCD1);
 				}
-//				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
 				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
@@ -271,25 +288,6 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-//				if((btnState&0x01) ==0)
-//				{
-//					pwmValueCW = (uint16_t)(65535 * adcValue);
-//					pwmValueCCW = 0;
-//					
-//				}
-//				else if((btnState>>1&0x01) ==0)
-//				{				
-//					pwmValueCW = 0;
-//					pwmValueCCW = (uint16_t)(65535 * adcValue);
-//				}
-//				else 
-//				{
-//					pwmValueCW = 0;
-//					pwmValueCCW = 0;
-//				}
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-				
 				if(state==1)
 				{
 					if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 0)
@@ -773,6 +771,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			RxDataBreak[7]=RxData[7];
+			RxDataBreak[6]=RxData[6];
 		}
 	}
 	
