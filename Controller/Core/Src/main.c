@@ -68,7 +68,9 @@ uint32_t brake_adc_p = 0;
 uint8_t count;
 uint8_t buffer;
 uint8_t dataBuff[6];
-char data[20];
+char data_y[20];
+char data_v[20];
+char data_d[20];
 
 typedef struct 
 {
@@ -627,17 +629,24 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  /* Prevent unused argument(s) compilation warning */
+  
   if(htim -> Instance == TIM3){
 		
-		sprintf(data,"D%.1f\n",dataCANpos.value);
-		HAL_UART_Transmit(&huart3,(uint8_t*)data,sizeof(data),HAL_MAX_DELAY);
+	sprintf(data_d,"\nD%.1f",dataCANpos.value);
+	HAL_UART_Transmit(&huart3,(uint8_t*)data_d,sizeof(data_d),HAL_MAX_DELAY);
+//		
+	sprintf(data_y,"\nY%.1f",dataCANyaw.value);
+	HAL_UART_Transmit(&huart3,(uint8_t*)data_y,sizeof(data_y),HAL_MAX_DELAY);	
+		
+	sprintf(data_v,"\nV%.1f",dataCANvel.value);
+	HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
+		
+	TxBack[7] = dataInBackWheel.val;
+	WriteCAN(BACK,TxBack);
 	
 	}
 
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_TIM_PeriodElapsedCallback could be implemented in the user file
-   */
+
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -663,7 +672,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void clearBuffer (uint8_t *buff)
 {
-	for(int i=0;i>6;i++)
+	for(int i=0;i<6;i++)
   {
 		buff[i]= 0;
   }
@@ -678,10 +687,10 @@ void updateData (uint8_t checkType, uint8_t *data)
 			CharToNum (dataInBackWheel.val, dataBuff, 2);
   		break;
 		case 'F':
-			CharToNum (dataInFrontWheel.val, dataBuff, 2);
+			CharToNum (dataInFrontWheel.val, dataBuff, 1);
   		break;
 		case 'P':
-			CharToNum (dataInBrake.val, dataBuff, 2);
+			CharToNum (dataInBrake.val, dataBuff, 1);
   		break;
   }
 }
@@ -695,7 +704,7 @@ void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index)
 				if(i==Index)
 					SaveNum =(DataIn[i]-48);
 				else if (i>Index) 
-					SaveNum = SaveNum*10 + (DataIn[i]-48);
+					SaveNum = SaveNum * 10 + (DataIn[i]-48);
 			}	
 	}	
 }
