@@ -8,6 +8,7 @@ import serial
 import os
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import threading
 
 # Đường dẫn tương đối của file
 
@@ -67,6 +68,7 @@ root.resizable(height=False, width=False)
 objects_1 = [] # mảng chứa các thành phần để active bằng nút manual
 objects_2 = [] # mảng chứa các elements để active bằng nút Connect
 objects_3 = [] # các element combobox về UART parameter
+objects_4 = [] # mảng để chứa elements được active bằng nút auto
 
 # Các biến dùng truyền UART
 emer_uart= b_uart= f_uart= p_uart= ang_uart= vel_uart= dis_uart = None
@@ -129,7 +131,8 @@ def connect_uart():
     parity_bit_value =switch_case_3(select_parity)
 
     # Kiểm tra nếu cổng UART không được cung cấp
-    if (selected_port == '')or(selected_gps ==''):
+    # if (selected_port == '')or(selected_gps ==''):
+    if (selected_port == ''):
         messagebox.showwarning('Warning', 'The COM/GPS port is empty.\nPlease select a COM/GPS port.')
     else:
         try:
@@ -139,18 +142,18 @@ def connect_uart():
             baudrate=selected_rate,
             stopbits=stop_bit_value,
             bytesize=data_bit_value,
-            parity=parity_bit_value,
-            timeout=1  # Timeout cho phép đọc từ giao diện UART
+            parity=parity_bit_value
+            # timeout=time  # Timeout cho phép đọc từ giao diện UART
         )
-             #khởi tạo đối tượng Serial
-            gps_uart = serial.Serial(
-                port=selected_gps,
-                baudrate=9600,
-                stopbits= stop_bit_value,
-                bytesize= data_bit_value,
-                parity= parity_bit_value,
-                timeout=1
-        )
+        #      #khởi tạo đối tượng Serial
+        #     gps_uart = serial.Serial(
+        #         port=selected_gps,
+        #         baudrate=9600,
+        #         stopbits= stop_bit_value,
+        #         bytesize= data_bit_value,
+        #         parity= parity_bit_value,
+        #         timeout=1
+        # )
 
             # Hiển thị thông báo kết nối UART thành công 
             if b_uart.is_open:
@@ -191,71 +194,68 @@ def connect_uart():
             # Xử lý lỗi mở cổng UART
             messagebox.showerror('Error', f'Failed to open COM port: {str(e)}')
 
-# Khởi tạo biến cờ và đặt giá trị ban đầu là False
-update_flag = False
+# hàm xử lý show angle
+def show_angle():
+    while(True):
+        # Đọc dữ liệu UART về góc
+        angle = ang_uart.readline().decode().strip()
+        # Xử lý tín hiệu UART cho góc
+        if angle.startswith('Y'):
+            angle_display['text'] = angle[1:].replace('\x00','')     
+            break
 
-angle_p = 0
+#Hàm xử lý show Velocity
+def show_vel():
+    while(True):
+        # Đọc dữ liệu UART về tốc độ
+        velocity = vel_uart.readline().decode().strip()
+        # Xử lý tín hiệu UART cho tốc độ
+        if velocity.startswith('V'):
+            vel_display['text'] = velocity[1:].replace('\x00','') 
+            break
 
-velocity_p = 0
+# Hàm xử lý show Distance
+def show_dis():
+    global distance
+    while(True):
+        # Đọc dữ liệu UART về quãng đường
+        distance = dis_uart.readline().decode().strip()
+        # Xử lý tín hiệu UART cho quãng đường
+        if distance.startswith('D'):
+            dis_display['text'] = distance[1:].replace('\x00','') 
+            break
 
-distance_p= 0
+# # Hàm xử lý show GPS
+# def show_gps():
 
-def show():
-    global angle_p, velocity_p, distance_p #, longitude, lattitude
+#     # Đọc dữ liệu UART về GPS
+#     gps = gps_uart.readline().decode().strip()
 
-    # Đọc dữ liệu UART về góc
-    angle = ang_uart.readline().decode().strip()
-
-    # Đọc dữ liệu UART về tốc độ
-    velocity = vel_uart.readline().decode().strip()
-
-    # Đọc dữ liệu UART về quãng đường
-    distance = dis_uart.read().strip()
-
-    # Đọc dữ liệu UART về GPS
-    gps = gps_uart.readline().decode().strip()
-
-    # Xử lý tín hiệu UART cho GPS
-    if gps.startswith('$GPRMC'):
-        data = gps.split(',')
-        if data[2] == 'A':
-            latitude = data[3]
-            longitude = data[5]
-            # Cập nhật giá trị lên các ô label
-            longitude_display['text'] =  longitude
-            latitude_display['text'] =  latitude
-
-    # Xử lý tín hiệu UART cho góc
-    if angle.startswith('Y'):
-        angle_n = float(angle[1:])
-        if angle_p != angle_n:
-            angle_display['text'] =  angle[1:]
-            angle_p = angle_n
-
-    # Xử lý tín hiệu UART cho tốc độ
-    if velocity.startswith('V'):
-        velocity_n = float(velocity[1:])
-        if velocity_p != velocity_n:
-            vel_display['text'] = velocity[1:]
-            velocity_p = velocity_
-
-    # Xử lý tín hiệu UART cho quãng đường
-    if distance.startswith(b'D'):
-        distance_n = float(distance[1:])
-        if distance_p != distance_n:
-            dis_display['text'] =  distance[1:]
-            distance_p = distance_n
-
-    # Kiểm tra biến cờ để quyết định liệu có tiếp tục cập nhật hay không
-    if update_flag:
-        root.after(200, show)
-
+#     # Xử lý tín hiệu UART cho GPS
+#     if gps.startswith('$GPRMC'):
+#         data = gps.split(',')
+#         if data[2] == 'A':
+#             latitude = data[3]
+#             longitude = data[5]
+#             # Cập nhật giá trị lên các ô label
+#             longitude_display['text'] =  longitude
+#             latitude_display['text'] =  latitude
+  
 # Hàm nhấn nút show value
+def show():
+    show_angle()
+    show_dis()
+    show_vel()
+    root.after(100, show)    
+
+# phân luồng cho nút show 
 def show_click():
-    global update_flag
-    if not update_flag:
-        update_flag = True
-        show()
+    threading.Thread(target = show).start()
+
+# Tạo nút Show value
+show_button = tk.Button(root,text = 'Show Value',state= 'disabled',bg='white',command=show_click)
+show_button.place(x= 680,y=90,height=30,width=80)
+objects_2.append(show_button)
 
 #Hàm cho nút Disconnect
 def disconnect_uart():
@@ -399,7 +399,7 @@ objects_3.append(gps_port)
 # Tạo ô chọn Baud Rate
 rate_port = ttk.Combobox(root, values=rate, state='disabled')
 rate_port.place(x=420, y=30, height=30, width=100)
-rate_port.set(rate[10])
+rate_port.set(rate[4])
 objects_3.append(rate_port)
 
 # Tạo ô chọn Data Bits
@@ -437,14 +437,21 @@ connect_button.place(x=540, y=30, height=30, width=80)
 disconnect_button = tk.Button(root,text='Disconnect',state ='disabled',bg='white',command=disconnect_uart)
 disconnect_button.place(x=540,y=90,height=30,width=80)
 
-# Tạo nút Show value
-show_button = tk.Button(root,text = 'Show Value',state= 'disabled',bg='white',command=show_click)
-show_button.place(x= 680,y=90,height=30,width=80)
-objects_2.append(show_button)
-
 ''' chức năng auto'''
+
+# Hàm cho nút Auto
+def auto_click():
+
+    # Kích hoạt các elements của auto
+    for obj in objects_4:
+        obj['state'] = 'normal'
+    
+    # Disable elements of manual
+    for obj in objects_1:
+        obj['state']= 'disabled'
+
 # Tạo nút Auto
-btn_auto = tk.Button(root, text='Auto', state='disabled',bg='white')
+btn_auto = tk.Button(root, text='Auto', state='disabled',bg='white',command=auto_click)
 btn_auto.place(x=10, y=90, height=30, width=70)
 objects_2.append(btn_auto)
 
@@ -461,41 +468,42 @@ linear_motion_label = tk.Label(auto_frame,text ='Vertical Movement',bg=manu_colo
 linear_motion_label.place(x= 10, y=10)
 
 #Tạo Entry nhập số m muốn xe đi chuyển
-linear_entry = tk.Entry(auto_frame,relief=tk.SUNKEN,justify='center')
+linear_entry = tk.Entry(auto_frame,relief=tk.SUNKEN,justify='center',state='disabled')
 linear_entry.place(x=10,y=40,height=30,width=150)
+objects_4.append(linear_entry)
 
-# biến cờ 
-flag = 0
-desired_pos = 0
-distance = 0
+def go_straight():
+    desired_pos = 0
+    direction = b'T'
+     
+    distance_value = float(distance[1:].replace('\x00', ''))
 
-def go_click():
+    if linear_entry.get() != '':
+        desired_pos = float(linear_entry.get())
+        if desired_pos < 0:
+            direction = b'L'
     
-    global flag, desired_pos, distance
-      
-    # Cập nhật giá trị distance từ dữ liệu đọc từ UART
-    data = dis_uart.readline().decode().strip()
-    if data.startswith('D'):
-        distance = float(data[1:])
-
-    deriserd_pos = float(linear_entry.get())
-
     if desired_pos<0:
         direction = b'L'
     else:
         direction = b'T'
 
-    while (distance <= desired_pos):
-        flag = 1
-    flag = 0
-    
+    if distance_value < desired_pos:
+        flag = 100
+    else:
+        flag = 0
+
     flag_transmit = str(flag)
     uart_data = b_start_bit + direction + flag_transmit.encode('utf-8') + stop_bit
     b_uart.write(uart_data)
+
+def go_click():
+    threading.Thread(target = go_straight).start()
         
 # Tạo nút Go
-go_btn = tk.Button(auto_frame,text = 'Go',bg='white',command=go_click)
+go_btn = tk.Button(auto_frame,text = 'Go',bg='white',command=go_click,state='disabled')
 go_btn.place(x=170, y= 40,height=30,width=50)
+objects_4.append(go_btn)
 
 ''' Chức năng manual'''
 # Hàm chức năng cho nút Manual
@@ -747,7 +755,7 @@ manu_emer = PhotoImage(file = emergency_stop)
 # Emergency Stop button for manual mode creation
 manu_emer_button = tk.Button(auto_frame,image = manu_emer, bg= manu_color, borderwidth=0, state='disabled',command = ma_em_click )
 manu_emer_button.place(x=420, y=10, width=100, height=100)
-objects_1.append(manu_emer_button)
+objects_4.append(manu_emer_button)
 
 # Khởi tạo đồ thị
 fig = Figure()
