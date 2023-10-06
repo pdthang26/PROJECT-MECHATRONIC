@@ -74,7 +74,6 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
-uint8_t               RxDataAile[8];
 uint32_t              TxMailbox;
 
 
@@ -94,17 +93,17 @@ int count=-1;
 
 
 //PID 
-//<<<<<<< HEAD
+
 //float Kp = 0.8;
 //float Ki = 0;
 //float Kd = 2;
 //float Ts = 0.01; // 10ms
 //float prev_error = 0.0;
 //float integral = 0.0;
-//=======
+
 float Kp = 0.98;
 float Ts = 0.01; // 10ms
-//>>>>>>> c45a8b2ef0e5a075e754175721ced617aae7cd74
+
 float input, output;
 
 
@@ -113,8 +112,8 @@ float input, output;
 uint16_t pwm_value = 0;
 uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
-float setpoint = 0;
 uint32_t valueIn = 0;
+uint8_t vel = 0;
 
 
 /* USER CODE END PV */
@@ -130,8 +129,8 @@ static void MX_TIM1_Init(void);
 static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-void dc_motor_control(float setpoint, float input);
-float pid_controller(float setpoint, float input);
+void dc_motor_control(uint32_t setpoint, uint32_t input);
+float pid_controller(uint32_t setpoint, uint32_t input);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
@@ -217,25 +216,32 @@ int main(void)
 		switch (mode)
 		{
 			case IDLE:
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
-				break;
-			case AUTO:
-				if(changeMode!=mode)
-				{
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
-					HAL_Delay(2000);
-					changeMode=mode;
-				}
-				setpoint = valueIn;
-				sprintf(lcdRPM,"controll:%.1f ",setpoint);
-				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d    ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				break;
+			case AUTO:
+				if(changeMode!=mode)
+				{
+					
+					CLCD_I2C_Clear(&LCD1);
+					CLCD_I2C_SetCursor(&LCD1, 0,0);
+					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+					dc_motor_control(9500, encoderValue);
+					HAL_Delay(2000);
+					changeMode=mode;
+				}
+				
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,0);
+				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				
 				break;
 			case MANUAL:
 				if(changeMode!=mode)
@@ -247,11 +253,9 @@ int main(void)
 					HAL_Delay(2000);
 				}
 				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
-				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdRPM,"ADC:%.2f ",adcValue*100);
 				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
-//				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -690,7 +694,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				else count--; // decrement count if car is moving backward
 			}
 			encoderValue = encoderGet + (count*65535);
-			dc_motor_control(setpoint, encoderValue);
+			dc_motor_control(valueIn, encoderValue);
 			
     }
 }
@@ -698,7 +702,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 // Traditional PID
-float pid_controller(float setpoint, float input) {
+float pid_controller(uint32_t setpoint, uint32_t input) {
 	
     float error = setpoint - input; // Calculating error
     
@@ -715,7 +719,7 @@ float pid_controller(float setpoint, float input) {
 }
 
 // dieu khien dong co dua tren pid
-void dc_motor_control(float setpoint, float input)
+void dc_motor_control(uint32_t setpoint, uint32_t input)
 {
 	if (mode == AUTO && changeMode==mode)
 	{
@@ -724,12 +728,12 @@ void dc_motor_control(float setpoint, float input)
 			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
 		if (output <0)
 		{
-			pwmValueCCW = (uint16_t)(-output *0.01* 20000);
+			pwmValueCCW = (uint16_t)(-output *0.01* (vel*200));
 			pwmValueCW = 0;
 		}
 		else if (output>0)
 		{
-			pwmValueCW = (uint16_t)(output *0.01* 20000);
+			pwmValueCW = (uint16_t)(output *0.01* (vel*200));
 			pwmValueCCW = 0;
 		}
 		else
@@ -774,6 +778,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==SLAVE_ID2)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			vel = RxData[3];
 			valueIn = convert8byteToUint32_t(RxData, 4,7);
 		}
 	}

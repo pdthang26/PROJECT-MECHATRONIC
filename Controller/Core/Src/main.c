@@ -67,7 +67,7 @@ uint32_t brake_adc_p = 0;
 
 uint8_t count;
 uint8_t buffer;
-uint8_t dataBuff[6];
+uint8_t dataBuff[9];
 char data_y[20];
 char data_v[20];
 char data_d[20];
@@ -132,7 +132,7 @@ uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void clearBuffer (uint8_t *buff);
 void updateData (uint8_t checkType,uint8_t *data);
-void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index);
+void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index);
 
 /* USER CODE END PFP */
 
@@ -188,8 +188,9 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 
 	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
-	HAL_UART_Receive_IT(&huart3, &buffer, 1);
 	HAL_TIM_Base_Start_IT(&htim3);
+	HAL_UART_Receive_IT(&huart3, &buffer, 1);
+	
 	GPS_Init(&GPS1,&huart1);
   /* USER CODE END 2 */
 
@@ -634,15 +635,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		
 	sprintf(data_d,"\nD%.1f",dataCANpos.value);
 	HAL_UART_Transmit(&huart3,(uint8_t*)data_d,sizeof(data_d),HAL_MAX_DELAY);
-//		
+		
 	sprintf(data_y,"\nY%.1f",dataCANyaw.value);
 	HAL_UART_Transmit(&huart3,(uint8_t*)data_y,sizeof(data_y),HAL_MAX_DELAY);	
 		
 	sprintf(data_v,"\nV%.1f",dataCANvel.value);
 	HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
 		
-	TxBack[7] = dataInBackWheel.val;
-	WriteCAN(BACK,TxBack);
 	
 	}
 
@@ -672,7 +671,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void clearBuffer (uint8_t *buff)
 {
-	for(int i=0;i<6;i++)
+	for(int i=0;i<9;i++)
   {
 		buff[i]= 0;
   }
@@ -684,27 +683,33 @@ void updateData (uint8_t checkType, uint8_t *data)
   {
   	case 'B':
 			dataInBackWheel.Dir = dataBuff[1];
-			CharToNum (dataInBackWheel.val, dataBuff, 2);
+			CharToNum (&dataInBackWheel.val, dataBuff, 2);
+			TxBack[6] = dataInBackWheel.Dir;
+			TxBack[7] = dataInBackWheel.val;
+			WriteCAN(BACK,TxBack);
   		break;
 		case 'F':
-			CharToNum (dataInFrontWheel.val, dataBuff, 1);
+			CharToNum (&dataInFrontWheel.val, dataBuff, 2);
+			TxFront[3] = dataBuff[1];
+			convertUint32_tTo8byte(dataInFrontWheel.val,TxFront,4,7);
+			WriteCAN(FRONT,TxFront);
   		break;
 		case 'P':
-			CharToNum (dataInBrake.val, dataBuff, 1);
+			CharToNum (&dataInBrake.val, dataBuff, 1);
   		break;
   }
 }
 
-void CharToNum (uint16_t SaveNum, uint8_t *DataIn, uint8_t Index)
+void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index)
 {
-	for (uint8_t i=Index;i<6; i++)
+	for (uint8_t i=Index;i<9; i++)
 	{
 		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
 			{
 				if(i==Index)
-					SaveNum =(DataIn[i]-48);
+					*SaveNum =(DataIn[i]-48);
 				else if (i>Index) 
-					SaveNum = SaveNum * 10 + (DataIn[i]-48);
+					*SaveNum = *SaveNum * 10 + (DataIn[i]-48);
 			}	
 	}	
 }
