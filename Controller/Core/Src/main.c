@@ -689,7 +689,8 @@ void updateData (uint8_t checkType, uint8_t *data)
 			WriteCAN(BACK,TxBack);
   		break;
 		case 'F':
-			CharToNum (&dataInFrontWheel.val, dataBuff, 1);
+			CharToNum (&dataInFrontWheel.val, dataBuff, 2);
+			TxFront[3] = dataBuff[1];
 			convertUint32_tTo8byte(dataInFrontWheel.val,TxFront,4,7);
 			WriteCAN(FRONT,TxFront);
   		break;

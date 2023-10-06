@@ -166,7 +166,11 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	HAL_Delay(1000);
-	while(MPU6050_Init(&hi2c1)){	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);}
+	while(MPU6050_Init(&hi2c1))
+	{	
+		HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
+		HAL_Delay(1000);
+	}
 	
   /* USER CODE END 2 */
 
