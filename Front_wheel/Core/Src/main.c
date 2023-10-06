@@ -112,7 +112,6 @@ float input, output;
 uint16_t pwm_value = 0;
 uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
-float setpoint = 0;
 uint32_t valueIn = 0;
 uint8_t vel = 0;
 
@@ -130,8 +129,8 @@ static void MX_TIM1_Init(void);
 static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-void dc_motor_control(float setpoint, float input);
-float pid_controller(float setpoint, float input);
+void dc_motor_control(uint32_t setpoint, uint32_t input);
+float pid_controller(uint32_t setpoint, uint32_t input);
 void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 
@@ -217,8 +216,8 @@ int main(void)
 		switch (mode)
 		{
 			case IDLE:
-				sprintf(lcdRPM,"ctrl:%.0f :%d ",setpoint,vel );
-				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d    ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -227,19 +226,22 @@ int main(void)
 			case AUTO:
 				if(changeMode!=mode)
 				{
+					
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+					dc_motor_control(9500, encoderValue);
 					HAL_Delay(2000);
 					changeMode=mode;
 				}
-				setpoint = valueIn;
-				sprintf(lcdRPM,"ctrl:%.0f :%d ",setpoint,vel );
-				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
+				
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				
 				break;
 			case MANUAL:
 				if(changeMode!=mode)
@@ -692,7 +694,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				else count--; // decrement count if car is moving backward
 			}
 			encoderValue = encoderGet + (count*65535);
-			dc_motor_control(setpoint, encoderValue);
+			dc_motor_control(valueIn, encoderValue);
 			
     }
 }
@@ -700,7 +702,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 // Traditional PID
-float pid_controller(float setpoint, float input) {
+float pid_controller(uint32_t setpoint, uint32_t input) {
 	
     float error = setpoint - input; // Calculating error
     
@@ -717,7 +719,7 @@ float pid_controller(float setpoint, float input) {
 }
 
 // dieu khien dong co dua tren pid
-void dc_motor_control(float setpoint, float input)
+void dc_motor_control(uint32_t setpoint, uint32_t input)
 {
 	if (mode == AUTO && changeMode==mode)
 	{

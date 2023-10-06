@@ -217,7 +217,7 @@ int main(void)
 					changeMode=mode_1;
 				}
 				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-				sprintf(lcdAcelY,"Y:%d          ",RxDataBreak[7]);
+				sprintf(lcdAcelY,"Y:%d  :%c    ",RxDataBreak[7],RxDataBreak[6]);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -240,12 +240,12 @@ int main(void)
 				}
 				else
 				{
-					if(RxDataBreak[6] == 'r')
+					if(RxDataBreak[6] == 'R')
 					{
 						pwm_value=RxDataBreak[7]*0.01*20000;
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 					}
-					else if (RxDataBreak[6] == 's')
+					else if (RxDataBreak[6] == 'S')
 					{
 						if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
 						{

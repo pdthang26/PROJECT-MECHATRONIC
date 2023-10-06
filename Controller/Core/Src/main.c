@@ -67,7 +67,7 @@ uint32_t brake_adc_p = 0;
 
 uint8_t count;
 uint8_t buffer;
-uint8_t dataBuff[6];
+uint8_t dataBuff[9];
 char data_y[20];
 char data_v[20];
 char data_d[20];
@@ -671,7 +671,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void clearBuffer (uint8_t *buff)
 {
-	for(int i=0;i<6;i++)
+	for(int i=0;i<9;i++)
   {
 		buff[i]= 0;
   }
@@ -702,7 +702,7 @@ void updateData (uint8_t checkType, uint8_t *data)
 
 void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index)
 {
-	for (uint8_t i=Index;i<6; i++)
+	for (uint8_t i=Index;i<9; i++)
 	{
 		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
 			{
