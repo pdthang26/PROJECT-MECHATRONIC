@@ -74,7 +74,7 @@ CLCD_I2C_Name LCD1;
 float adcValue;
 float aileValue;
 uint8_t mode=0 ;
-uint8_t mode_1 = 3, changeMode;
+uint8_t mode_1 = AUTO, changeMode;
 char lcdAcelX[16];
 char lcdAcelY[16];
 char lcdADC[16];
@@ -247,7 +247,7 @@ int main(void)
 					}
 					else if (RxDataBreak[6] == 'S')
 					{
-						if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
+						if(Data.KalmanAngleX<3.0 && Data.KalmanAngleX > -3.0)
 						{
 							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
 							{

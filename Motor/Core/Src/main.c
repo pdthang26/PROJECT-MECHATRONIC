@@ -97,17 +97,19 @@ int count=-1;
 float revolutions;
 
 // Variable PID
-float Kp = 1.5;
-float Ki = 0;
-float Kd = 0;
-float integral = 0.0;
-float derivative = 0.0;
-float last_error = 0.0;
-float output = 0.0;
+//float Kp = 1.5;
+//float Ki = 0;
+//float Kd = 0;
+//float integral = 0.0;
+//float derivative = 0.0;
+//float last_error = 0.0;
+//float output = 0.0;
 
-double E, E1, E2;
-double alpha, beta, gamma;
-double Output, LastOutput;
+uint16_t out;
+
+//double E, E1, E2;
+//double alpha, beta, gamma;
+//double Output, LastOutput;
 
 // Khai bao bien cho PWM
 uint16_t DAC_value = 0; 
@@ -176,17 +178,22 @@ int main(void)
   MX_ADC1_Init();
   MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
-	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13,1);
-	
-	//LCD
-	HAL_ADC_Start(&hadc1);
+	// Init LCD 
 	CLCD_I2C_Init(&LCD1,&hi2c2,0x4E,16,2);
 	
 	// init MCP4725 DAC
 	MCP4725_I2C_Init(&MCP4725, &hi2c2, 0xC0, WRITE_DAC_REG_ONLY, POW_DOWN_NOMAL);
+	MCP4725_I2C_SetValueDAC(&MCP4725, 0);// set initial value of DAC is 0
+	
+	// init timer and encoder reader
+	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
+	HAL_TIM_Base_Start_IT(&htim3);// khoi dong ngat thoi gian lay mau
+	
+	
+	// Start reading ADC 
+	HAL_ADC_Start(&hadc1);
+
 	
 	//initial CAN protocol
 	HAL_CAN_Start(&hcan);
@@ -199,7 +206,7 @@ int main(void)
   TxHeader.TransmitGlobalTime = DISABLE;
 	
 	
-	MCP4725_I2C_SetValueDAC(&MCP4725, 0);// set initial value of DAC is 0
+	
 	
 
   /* USER CODE END 2 */
@@ -218,8 +225,8 @@ while (1)
 		{
 			throValue = RxDataThro[7];
 			mode = AUTO;
-			sprintf(row1,"dis:%.2f :%d", posInMeter,throValue);
-			sprintf(row2,"vel:%.2f       ",mps);
+			sprintf(row1,"dis:%.2f :%d  ", posInMeter,throValue);
+			sprintf(row2,"vel:%.2f :%d  ",mps, out);
 		}
 		else if((btnState>>2&0x01) == 0)
 		{			
@@ -626,54 +633,56 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 // tính toán PID
-float pid_controller(float setpoint, float input, float dt)
-{
-	float E = setpoint - input;
-	alpha = 2 *sampleTime*Kp + Ki* sampleTime * sampleTime + 2*Kd;
-  beta = sampleTime * sampleTime * Ki - 4 * Kd - 2 * sampleTime * Kp;
-  gamma = 2 * Kd;
-  //Output = (alpha * E + beta * E1 + gamma * E2 + 2 * sampleTime * LastOutput) / (2 * sampleTime);
-	Output = Kp*E;
-  LastOutput = Output;
-  E2 = E1;
-  E1 = E;
-	if (Output > 100.0)
-			Output = 100.0;
-	else if (Output < -100.0)
-			output = -100.0;
-	return Output;
-}
+//float pid_controller(float setpoint, float input, float dt)
+//{
+//	float E = setpoint - input;
+//	alpha = 2 *sampleTime*Kp + Ki* sampleTime * sampleTime + 2*Kd;
+//  beta = sampleTime * sampleTime * Ki - 4 * Kd - 2 * sampleTime * Kp;
+//  gamma = 2 * Kd;
+//  //Output = (alpha * E + beta * E1 + gamma * E2 + 2 * sampleTime * LastOutput) / (2 * sampleTime);
+//	Output = Kp*E;
+//  LastOutput = Output;
+//  E2 = E1;
+//  E1 = E;
+//	if (Output > 100.0)
+//			Output = 100.0;
+//	else if (Output < -100.0)
+//			output = -100.0;
+//	return Output;
+//}
 
 
 
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input, char dir)
 {
-		switch (dir)
-		{
-			case 'T':
-				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
-				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,1);
-				break;
-			case 'L':
-				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
-				HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
-				break;
-		}
-		if(setpoint==0)
-		{
-			MCP4725_I2C_SetValueDAC(&MCP4725, 0);
-			if(mps ==0) TxData[6] = 'S';
-			else TxData[6] = 'R';
-			TxData[7] = 100;
-			WriteCAN(BRAKE,TxData);
-		}
-		else 
-		{
-			MCP4725_I2C_SetValueDAC(&MCP4725, 3000);
-			TxData[7] = 0;
-			WriteCAN(BRAKE,TxData);
-    }
+	out = (uint16_t)map(setpoint, 100, 0, 4095, 2000 );
+	switch (dir)
+	{
+		case 'T':
+			HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
+			HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,1);
+			break;
+		case 'L':
+			HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
+			HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,0);
+			break;
+	}
+	if(setpoint==0)
+	{
+		MCP4725_I2C_SetValueDAC(&MCP4725, 0);
+		if(mps ==0) TxData[6] = 'S';
+		else TxData[6] = 'R';
+		TxData[7] = 50;
+		WriteCAN(BRAKE,TxData);
+	}
+	else 
+	{
+		MCP4725_I2C_SetValueDAC(&MCP4725, out);
+		TxData[6] = 'R';
+		TxData[7] = 0;
+		WriteCAN(BRAKE,TxData);
+	}
 }
 
 void WriteCAN(uint16_t ID,uint8_t *data)
