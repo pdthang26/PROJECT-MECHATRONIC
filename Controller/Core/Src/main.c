@@ -202,28 +202,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-//		if (back_adc_p != dataInBackWheel.val){
-//			TxBack[7] = (uint8_t)dataInBackWheel.val;
-//			WriteCAN(BACK,TxBack);
-//		}
-//		
-//		if (front_adc_p != dataInFrontWheel.val){
-//			TxFront[7] = (uint8_t)dataInFrontWheel.val;
-//			WriteCAN(FRONT,TxFront);
-//		}
-//		
-//		if (brake_adc_p != dataInBrake.val){
-//			TxBrake[7] = (uint8_t)dataInBrake.val;
-//			WriteCAN(BRAKE,TxBrake);
-//		}
 		
 		
-		
-		sprintf(kinhdo,"Long:%.6f",dataCANyaw.value);
+		sprintf(kinhdo,"%C:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);
 		
-		sprintf(vido," %.2f ", dataCANpos.value);
+		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value,dataCANvel.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,vido);
 	

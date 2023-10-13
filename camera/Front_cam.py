@@ -1,15 +1,8 @@
 import cv2
 import numpy as np
 
-# Kích thước khung hình
-frame_width = 640
-frame_height = 480
 
-# Tạo đối tượng VideoWriter để ghi video
-focal_length = 1080  # Độ dài tiêu cự (focal length) của camera (đơn vị pixel)
-sensor_width = 36  # Chiều rộng cảm biến của camera (đơn vị mm)
-image_width = 640  # Chiều rộng hình ảnh (đơn vị pixel)
-image_height = 480  # Chiều cao hình ảnh (đơn vị pixel)
+
 
 # Kích thước của đường tròn trên mặt đất
 ground_circle_radius = 1  # Bán kính đường tròn trên mặt đất (đơn vị mét)
@@ -39,14 +32,7 @@ while True:
     cv2.drawContours(frame, [points], 0, (0, 255, 0), 2)
     
 
-    # Tính toán bán kính của đường tròn trên hình ảnh
-    pixel_radius = (focal_length * ground_circle_radius * image_width) / (sensor_width * 1000)
 
-    # Vẽ đường tròn trên hình ảnh
-    center = (image_width // 2, image_height // 2)  # Tìm tâm của hình ảnh
-    color = (0, 255, 0)  # Màu xanh lá cây (BGR)
-    thickness = 2  # Độ dày đường viền
-    cv2.circle(frame, center, int(pixel_radius), color, thickness)
 
     
 
