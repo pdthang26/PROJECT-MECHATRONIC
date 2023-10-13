@@ -219,7 +219,7 @@ int main(void)
 		switch (mode)
 		{
 			case OFFSET:
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 65535);
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 40000);
 				HAL_Delay(3000);
 				
 				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);

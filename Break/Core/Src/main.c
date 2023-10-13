@@ -204,24 +204,24 @@ int main(void)
 		
 		switch(mode_1){
 			case IDLE:
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
 				break;
 			case AUTO:
 				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+//					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_SetCursor(&LCD1, 0,0);
+//					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
 					setpoint = 0;
 					HAL_Delay(2000);
 					changeMode=mode_1;
 				}
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-				sprintf(lcdAcelY,"Y:%d  :%c    ",RxDataBreak[7],RxDataBreak[6]);
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-				CLCD_I2C_SetCursor(&LCD1, 0,1);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+//				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
+//				sprintf(lcdAcelY,"Y:%d  :%c    ",RxDataBreak[7],RxDataBreak[6]);
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+//				CLCD_I2C_SetCursor(&LCD1, 0,1);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(RxDataBreak[7]==0)
 				{
 						while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
@@ -274,20 +274,20 @@ int main(void)
 				break;
 			case MANUAL:
 				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
+//					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_SetCursor(&LCD1, 0,0);
+//					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
 					changeMode=mode_1;
 					HAL_Delay(2000);
-					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_Clear(&LCD1);
 				}
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-				CLCD_I2C_SetCursor(&LCD1, 0,1);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+//				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
+//				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+//				CLCD_I2C_SetCursor(&LCD1, 0,1);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(state==1)
 				{
 					if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 0)
