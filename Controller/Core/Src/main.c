@@ -204,11 +204,11 @@ int main(void)
 		
 		
 		
-		sprintf(kinhdo,"%C:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
+		sprintf(kinhdo,"%c:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);
 		
-		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value,dataCANvel.value);
+		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value, dataCANvel.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,vido);
 	

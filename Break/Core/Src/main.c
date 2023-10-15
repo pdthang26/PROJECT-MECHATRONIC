@@ -224,19 +224,44 @@ int main(void)
 //				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(RxDataBreak[7]==0)
 				{
-						while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+					if(RxDataBreak[6]=='G')
+					{
+						if( Data.KalmanAngleX <= -5.0)
 						{
-							pwmValueCW = 0;
-							pwmValueCCW = 33000;
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							uint16_t pwm_decelaration  =  10000*0.05*(-Data.KalmanAngleX / 5.0);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1,pwm_decelaration);
 						}
-						
-						pwmValueCW = 0;
-						pwmValueCCW = 0;
-						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
-					
+						else
+						{
+							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+							{
+								pwmValueCW = 0;
+								pwmValueCCW = 33000;
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							}
+							
+							pwmValueCW = 0;
+							pwmValueCCW = 0;
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+						}
+					}
+					else if (RxDataBreak[6]=='R')
+					{
+							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+							{
+								pwmValueCW = 0;
+								pwmValueCCW = 33000;
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							}
+							
+							pwmValueCW = 0;
+							pwmValueCCW = 0;
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+					}
 				}
 				else
 				{
