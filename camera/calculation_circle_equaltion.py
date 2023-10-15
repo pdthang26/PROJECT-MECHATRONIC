@@ -17,10 +17,10 @@ def lagrange_interpolation(data, x):
     return result
 
 # Mảng dữ liệu mẫu (x, y)
-data = [(1, 2), (2, 4), (3, 6), (4, 8)]
+data = [[120, 420], [125, 400], [180, 380], [212, 370]]
 
 # Giá trị x cần nội suy để tìm giá trị tương ứng y
-x = 2.5
+x = 138
 
 # Tính giá trị y bằng phương pháp nội suy Lagrange
 y = lagrange_interpolation(data, x)

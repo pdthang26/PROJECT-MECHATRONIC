@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def calculate_angle(a1, a2, a3):
+def calculate_angle():
     # Chuyển đổi các vector thành dạng numpy array
     a1 = np.array(a1)
     a2 = np.array(a2)

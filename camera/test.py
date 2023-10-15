@@ -5,7 +5,7 @@ import numpy as np
 image = np.ones((500, 500, 3), dtype=np.uint8) * 255
 
 # Các điểm đầu vào
-points = np.array([[100, 100], [90, 200], [70, 300], [50, 400]])
+points = np.array([[200, 100], [100, 200], [70, 300], [50, 400]])
 
 # Chuyển đổi các điểm đầu vào thành đường cong
 curve = []
@@ -15,6 +15,7 @@ for t in np.arange(0, 1, 0.01):
     curve.append([x, y])
 
 # Vẽ đường cong trên hình ảnh
+
 curve = np.array(curve)
 cv2.polylines(image, [curve], False, (0, 255, 0), 2)
 
