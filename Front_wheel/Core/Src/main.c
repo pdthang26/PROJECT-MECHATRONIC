@@ -35,6 +35,7 @@
 /* USER CODE BEGIN PD */
 #define diameter            0.4 //(m)
 #define PI                  3.14159
+#define OFFSET							3
 #define IDLE								0
 #define AUTO								1
 #define MANUAL							2
@@ -63,7 +64,7 @@ TIM_HandleTypeDef htim3;
 CLCD_I2C_Name LCD1;
 float adcValue;
 float aileValue;
-uint8_t mode=0, btnState, changeMode;
+uint8_t mode = OFFSET, btnState, changeMode;
 char lcdRPM[16];
 char lcdEncoderValue[16];
 
@@ -74,11 +75,11 @@ CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
 uint8_t               RxData[8];
-uint8_t               RxDataAile[8];
 uint32_t              TxMailbox;
 
 
 // Encoder varible
+uint32_t encoderValuePrevious;
 int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
@@ -94,17 +95,16 @@ int count=-1;
 
 
 //PID 
-//<<<<<<< HEAD
 //float Kp = 0.8;
 //float Ki = 0;
 //float Kd = 2;
 //float Ts = 0.01; // 10ms
 //float prev_error = 0.0;
 //float integral = 0.0;
-//=======
-float Kp = 0.98;
+
+float Kp = 1.1;
 float Ts = 0.01; // 10ms
-//>>>>>>> c45a8b2ef0e5a075e754175721ced617aae7cd74
+
 float input, output;
 
 
@@ -113,9 +113,10 @@ float input, output;
 uint16_t pwm_value = 0;
 uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
-float setpoint = 0;
 uint32_t valueIn = 0;
-
+uint8_t vel = 0;
+float setpoint ;
+int offsetCount;
 
 /* USER CODE END PV */
 
@@ -180,9 +181,10 @@ int main(void)
 	// start analog to digital convert
 	HAL_ADC_Start(&hadc1);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,1);
+	HAL_Delay(20000);
   //Start timer
-	HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
-	HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
+
+	
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // khoi dong PWM tai channel 1
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // khoi dong PWM tai channel 2
 	// Enable motor
@@ -216,13 +218,36 @@ int main(void)
     /* USER CODE BEGIN 3 */
 		switch (mode)
 		{
+			case OFFSET:
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 40000);
+				HAL_Delay(3000);
+				
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+				count=-1;
+				__HAL_TIM_SET_COUNTER(&htim2, 0);
+				HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
+				HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
+				
+				HAL_Delay(2000);
+				mode = IDLE;
+				break;
 			case IDLE:
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
+				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
+				CLCD_I2C_SetCursor(&LCD1, 0,1);
+				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				if(encoderValue>8996)
+				{
+					HAL_Delay(3000);
+					mode = AUTO;
+				}
 				break;
 			case AUTO:
 				if(changeMode!=mode)
 				{
+					vel=0;
 					CLCD_I2C_Clear(&LCD1);
 					CLCD_I2C_SetCursor(&LCD1, 0,0);
 					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
@@ -230,12 +255,13 @@ int main(void)
 					changeMode=mode;
 				}
 				setpoint = valueIn;
-				sprintf(lcdRPM,"controll:%.1f ",setpoint);
-				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
+				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
+				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
+				
 				break;
 			case MANUAL:
 				if(changeMode!=mode)
@@ -247,11 +273,9 @@ int main(void)
 					HAL_Delay(2000);
 				}
 				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
-				aileValue = (float) RxDataAile[7];
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 				sprintf(lcdRPM,"ADC:%.2f ",adcValue*100);
 				sprintf(lcdEncoderValue,"encoder:%d ",encoderValue);
-//				sprintf(lcdEncoderValue,"controll:%.1f",aileValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -681,6 +705,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM1) 
 		{
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			direction = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? -1 : 1;// checking the direction of the car
 			encoderGet = __HAL_TIM_GET_COUNTER(&htim2);// get value from encoder of timer 2
 			if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) // check if timer 2 overflowed
@@ -690,8 +715,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				else count--; // decrement count if car is moving backward
 			}
 			encoderValue = encoderGet + (count*65535);
-			dc_motor_control(setpoint, encoderValue);
-			
+			if ( mode == IDLE)
+			{
+				vel=100;
+				dc_motor_control(10000, encoderValue);
+			}
+			else if (mode == AUTO && changeMode==mode)
+			{
+				dc_motor_control(setpoint, encoderValue);
+			}
+		
     }
 }
 
@@ -717,19 +750,17 @@ float pid_controller(float setpoint, float input) {
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input)
 {
-	if (mode == AUTO && changeMode==mode)
-	{
 		output = pid_controller(setpoint, input);
 			
 			// tính gia tri PWM tu gia tri dieu khien PID va xuat xung PWM tai chan PB6
 		if (output <0)
 		{
-			pwmValueCCW = (uint16_t)(-output *0.01* 20000);
+			pwmValueCCW = (uint16_t)(-output *0.01* (vel*350));
 			pwmValueCW = 0;
 		}
 		else if (output>0)
 		{
-			pwmValueCW = (uint16_t)(output *0.01* 20000);
+			pwmValueCW = (uint16_t)(output *0.01* (vel*350));
 			pwmValueCCW = 0;
 		}
 		else
@@ -739,7 +770,7 @@ void dc_motor_control(float setpoint, float input)
 		}
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-	}
+	
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
@@ -774,6 +805,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		if(RxHeader.StdId==SLAVE_ID2)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			vel = RxData[3];
 			valueIn = convert8byteToUint32_t(RxData, 4,7);
 		}
 	}

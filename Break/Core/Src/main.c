@@ -74,7 +74,7 @@ CLCD_I2C_Name LCD1;
 float adcValue;
 float aileValue;
 uint8_t mode=0 ;
-uint8_t mode_1 = 3, changeMode;
+uint8_t mode_1 = AUTO, changeMode;
 char lcdAcelX[16];
 char lcdAcelY[16];
 char lcdADC[16];
@@ -204,28 +204,26 @@ int main(void)
 		
 		switch(mode_1){
 			case IDLE:
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1, "  AUTO / MANUAL ");
 				break;
 			case AUTO:
 				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
+//					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_SetCursor(&LCD1, 0,0);
+//					CLCD_I2C_WriteString(&LCD1, "    AUTO MODE   ");
 					setpoint = 0;
 					HAL_Delay(2000);
 					changeMode=mode_1;
 				}
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-				sprintf(lcdAcelY,"Y:%d          ",RxDataBreak[7]);
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-				CLCD_I2C_SetCursor(&LCD1, 0,1);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
+//				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
+//				sprintf(lcdAcelY,"Y:%d  :%c    ",RxDataBreak[7],RxDataBreak[6]);
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+//				CLCD_I2C_SetCursor(&LCD1, 0,1);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(RxDataBreak[7]==0)
 				{
-					if(Data.KalmanAngleX<2.0 && Data.KalmanAngleX > -2.0)
-					{
 						while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
 						{
 							pwmValueCW = 0;
@@ -239,57 +237,57 @@ int main(void)
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 					
-					}
-					
-					else
-					{
-						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 23000);
-					}
-					
 				}
 				else
 				{
-					pwm_value=RxDataBreak[7]*0.01*20000;
-					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+					if(RxDataBreak[6] == 'R')
+					{
+						pwm_value=RxDataBreak[7]*0.01*20000;
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
+					}
+					else if (RxDataBreak[6] == 'S')
+					{
+						if(Data.KalmanAngleX<3.0 && Data.KalmanAngleX > -3.0)
+						{
+							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
+							{
+								pwmValueCW = 0;
+								pwmValueCCW = 33000;
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
+								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
+							}
+							
+							pwmValueCW = 0;
+							pwmValueCCW = 0;
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+						
+						}
+						
+						else
+						{
+							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 23000);
+						}
+					}
 				}
 				
 				break;
 			case MANUAL:
 				if(changeMode!=mode_1){
-					CLCD_I2C_Clear(&LCD1);
-					CLCD_I2C_SetCursor(&LCD1, 0,0);
-					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
+//					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_SetCursor(&LCD1, 0,0);
+//					CLCD_I2C_WriteString(&LCD1, "   MANUAL MODE  ");
 					changeMode=mode_1;
 					HAL_Delay(2000);
-					CLCD_I2C_Clear(&LCD1);
+//					CLCD_I2C_Clear(&LCD1);
 				}
-//				btnState =  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4)<<1 | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
 				adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
-				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
-				CLCD_I2C_SetCursor(&LCD1, 0,0);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
-				CLCD_I2C_SetCursor(&LCD1, 0,1);
-				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
-//				if((btnState&0x01) ==0)
-//				{
-//					pwmValueCW = (uint16_t)(65535 * adcValue);
-//					pwmValueCCW = 0;
-//					
-//				}
-//				else if((btnState>>1&0x01) ==0)
-//				{				
-//					pwmValueCW = 0;
-//					pwmValueCCW = (uint16_t)(65535 * adcValue);
-//				}
-//				else 
-//				{
-//					pwmValueCW = 0;
-//					pwmValueCCW = 0;
-//				}
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
-//				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
-				
+//				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
+//				sprintf(lcdAcelY,"Y:%.2f A:%.2f ",Data.Ay,adcValue);
+//				CLCD_I2C_SetCursor(&LCD1, 0,0);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
+//				CLCD_I2C_SetCursor(&LCD1, 0,1);
+//				CLCD_I2C_WriteString(&LCD1,lcdAcelY);
 				if(state==1)
 				{
 					if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == 0)
@@ -773,6 +771,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 		{
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 			RxDataBreak[7]=RxData[7];
+			RxDataBreak[6]=RxData[6];
 		}
 	}
 	
