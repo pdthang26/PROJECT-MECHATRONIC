@@ -4,7 +4,7 @@ import numpy as np
 cv2.namedWindow("Camera")
 
 global angle 
-angle = -38
+angle = 38
 def mirror_draw (width, arr):
     arr_mirror_point = []
     for i in range(len(arr)):
@@ -174,15 +174,15 @@ while True:
 
     # Hiển thị khung hình
     cv2.imshow("Camera", frame)
-    if angle <=-38:
-        flag = 1
-    elif angle >=38:
-        flag = 0
-    if flag == 1:
-        angle +=1
-    elif flag ==0:
-        angle -=1
-    # Thoát khỏi vòng lặp nếu nhấn phím 'q'
+    # if angle <=-38:
+    #     flag = 1
+    # elif angle >=38:
+    #     flag = 0
+    # if flag == 1:
+    #     angle +=1
+    # elif flag ==0:
+    #     angle -=1
+    # # Thoát khỏi vòng lặp nếu nhấn phím 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 

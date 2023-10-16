@@ -234,7 +234,11 @@ while (1)
 			sprintf(row2,"vel:%.2f :%d  ",mps, out);
 		}
 		else if((btnState>>2&0x01) == 0)
-		{			
+		{	
+			TxData[6] = 'R';
+			TxData[7] = 0;
+			WriteCAN(BRAKE,TxData);
+			
 			mode = MANUAL;
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
