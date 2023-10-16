@@ -527,7 +527,7 @@ tree.place(x=10, y=85, height=170, width=363)
 '''------ooo----'''
 
 # Điểm đầu của xe
-init =(0,0)
+init =(0.0,0.0)
 
 # Mảng để lưu các điểm
 points = [init]
@@ -544,7 +544,7 @@ def set_click():
     y = Y_entry.get()
 
     # Tọa độ điểm 
-    entry_point=(int(x),int(y))
+    entry_point=(float(x),float(y))
 
     # Thêm các điểm vào mảng
     points.append(entry_point)
@@ -682,18 +682,17 @@ STRAIGHT_pulse = 10000 # bánh đánh thẳng
 MIN_right_pulse = 0 # bánh đánh hết sang phải
 Max_steering = 38 # góc quay tối đa qua một bên
 
-def adjust_front_pulse(desired,actual):
-
+def adjust_front_pulse(desired,actual,change):
     # điều xung cho quay bên trái
-    if desired - actual > 45:
+    if desired - actual > abs(change)/2:
         pulse = MAX_left_pulse
-    elif (desired - actual)>=0 and (desired - actual)<= 45:
+    elif (desired - actual)>=0 and (desired - actual)<= abs(change)/2:
         pulse = STRAIGHT_pulse
 
     # điều xung cho quay bên phải
-    if desired - actual <-45:
+    if desired - actual <-abs(change)/2:
         pulse = MIN_right_pulse
-    elif (desired - actual)>=-45 and (desired - actual)<=0:
+    elif (desired - actual)>=-abs(change/2) and (desired - actual)<=0:
         pulse = STRAIGHT_pulse
   
     return pulse
@@ -702,7 +701,7 @@ def adjust_front_pulse(desired,actual):
 '''điều tốc độ quay motor bánh trước'''
 MAX_steering_speed = 100
 MID_steering_speed = 50
-Min_teering_speed = 40
+Min_steering_speed = 40
 
 def adjust_front_speed(desired,actual):
 
@@ -710,9 +709,9 @@ def adjust_front_speed(desired,actual):
     if abs(desired-actual)>45:
         speed = MAX_steering_speed
     elif abs(desired - actual) >=15 and abs(desired-actual)<=45:
-        speed = MID_teering_speed
+        speed = MID_steering_speed
     elif abs(desired - actual)>=0 and abs(desired-actual)<15:
-        speed = Min_teering_speed
+        speed = Min_steering_speed
 
     return speed
 '''------oooo-----'''
@@ -721,15 +720,15 @@ run = False
 
 '''điểu khiển bánh trước sau chạy auto'''
 achieved_length = 0 # biển để lưu total length sau khi kết thúc
-displacement = 0 # độ dời
 actual_dis_p = 0 # lưu giá trị thực tế sau khi kết thúc 
 back_speed = 0 # giá trị tốc độ của bánh sau
-desired_angle = 0 # giá trị góc mong muốn
+displaced_angle = 0 # giá trị góc mong muốn
 actual_angle_p=0 #lưu giá trị góc của xe khi kết thúc một chu trình chạy
 
 def car_auto_control():
-    global achieved_length,actual_dis_p,init,desired_angle
-    global run,points,back_speed,displacement
+    global achieved_length,actual_dis_p,init
+    global run,points,back_speed
+    global displaced_angle,actual_angle_p
 
     if run:
         required_length, length_list = calculate_total_length(points) 
@@ -739,38 +738,47 @@ def car_auto_control():
         actual_angle = float(angle[1:].replace('\x00', ''))
 
         total_length = achieved_length + required_length
+        desired_angle = float(actual_angle_p + displaced_angle)
 
         direction = b'T'
 
         if actual_dis<total_length:
 
+            displacement = 0 # độ dời
             for i in range(len(length_list)):
                 for j in range (len(angle_list)):
                     displacement += length_list[i]
-                    if actual_dis >= actual_dis_p and actual_dis < actual_dis_p + length_list[0]:
-                        desired_angle = angle_list[0]
-                    elif actual_dis>= actual_dis_p + displacement:
+                    if (actual_dis >= actual_dis_p) and (actual_dis < actual_dis_p + length_list[0]):
+                        if actual_dis == actual_dis_p:
+                            actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                        displaced_angle = angle_list[0] # độ dời góc
+
+                    elif actual_dis>= (actual_dis_p + displacement):
                         if j+1<len(angle_list):
-                            desired_angle = angle_list[j+1]
-    
+                            if actual_dis == actual_dis_p + displacement:
+                                actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                            displaced_angle = angle_list[j+1] # độ dời góc
+                   
+
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
-                back_speed = 75
-            elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-0.8):
-                if (actual_angle-desired_angle>=-1) and (actual_angle-desired-desired_angle<=1):
+                back_speed = 50
+            elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-1):
+                if (actual_angle-desired_angle>=-1) and (actual_angle-desired_angle<=1):
                     back_speed = 30 # xe đi thẳng chạy tốc 30
                 else:
-                    back_speed = 50 # xe rẽ chạy tốc 50
+                    back_speed = 35 # xe rẽ chạy tốc 50
             else: 
                 back_speed = 0
+            
         else:
             achieved_length = total_length # lưu lại tổng độ dài quãng đường đi được
             actual_dis_p = actual_dis # lưu lại quãng đường thực tế
             init = points[len(points)-1] # lưu tọa độ kết thúc của 1 chu trình
             points =[init] 
             run = False
-        
+
         # UART cho bánh trước
-        front_pulse = str(adjust_front_pulse(desired_angle,actual_angle))
+        front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
         front_speed = chr(adjust_front_speed(desired_angle,actual_angle))
         f_uart_data = f_start_bit + front_speed.encode('utf-8') + front_pulse.encode('utf-8') + stop_bit
         f_uart.write(f_uart_data)
@@ -966,7 +974,7 @@ front_frame.place(x=205,y=40)
 #truyền UART bánh trước
 def turn_slide(value):
     
-    turn_adc = str(int(value))
+    turn_adc = str(int(value)*2000/200)
     turn_speed = chr(70)
     uart_data = f_start_bit + turn_speed.encode('utf-8') + turn_adc.encode('utf-8') + stop_bit    
     if f_uart.is_open:
