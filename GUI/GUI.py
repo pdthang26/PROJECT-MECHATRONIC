@@ -9,6 +9,7 @@ import os
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import threading
+import numpy as np
 
 # Đường dẫn tương đối của file
 
@@ -55,6 +56,9 @@ manu_color = '#F7C8E0'
 # Bit bắt đầu cho gửi UART bánh sau
 b_start_bit = b'B'
 
+# Start bit for UART transmission on the front wheel
+f_start_bit = b'F'
+
 # Bit kết thúc
 stop_bit = b'\x0A'
 
@@ -98,6 +102,7 @@ def connect_uart():
     selected_stop = stop_port.get()
     select_data = int(data_port.get())
     select_parity = parity_port.get()
+    time = 1
         
     # tạo một switch case check coi stop bit chọn bao nhiêu bit
     def switch_case_1(argument):
@@ -142,8 +147,8 @@ def connect_uart():
             baudrate=selected_rate,
             stopbits=stop_bit_value,
             bytesize=data_bit_value,
-            parity=parity_bit_value
-            # timeout=time  # Timeout cho phép đọc từ giao diện UART
+            parity=parity_bit_value,
+            timeout=time  # Timeout cho phép đọc từ giao diện UART
         )
         #      #khởi tạo đối tượng Serial
         #     gps_uart = serial.Serial(
@@ -196,12 +201,13 @@ def connect_uart():
 
 # hàm xử lý show angle
 def show_angle():
+    global angle
     while(True):
         # Đọc dữ liệu UART về góc
         angle = ang_uart.readline().decode().strip()
         # Xử lý tín hiệu UART cho góc
         if angle.startswith('Y'):
-            angle_display['text'] = angle[1:].replace('\x00','')     
+            angle_display['text'] = angle[1:].replace('\x00','')   
             break
 
 #Hàm xử lý show Velocity
@@ -237,9 +243,19 @@ def show_dis():
 #         if data[2] == 'A':
 #             latitude = data[3]
 #             longitude = data[5]
+
+#             # Chuyển đổi độ phút giây
+#             latitude_degrees = int(latitude_decimal // 100)
+#             latitude_minutes = (latitude_decimal % 100) / 60
+#             latitude = latitude_degrees + latitude_minutes
+
+#             longitude_degrees = int(longitude_decimal // 100)
+#             longitude_minutes = (longitude_decimal % 100) / 60
+#             longitude = longitude_degrees + longitude_minutes
+
 #             # Cập nhật giá trị lên các ô label
-#             longitude_display['text'] =  longitude
-#             latitude_display['text'] =  latitude
+#             longitude_display['text'] = f"{longitude:.6f}"  # Hiển thị đến 6 chữ số thập phân
+#             latitude_display['text'] = f"{latitude:.6f}"  # Hiển thị đến 6 chữ số thập phân
   
 # Hàm nhấn nút show value
 def show():
@@ -281,7 +297,6 @@ def disconnect_uart():
 
     if not b_uart.is_open:
         messagebox.showerror('Warning','UART is disconnected !')
-
 
 # Hàm cho nút Open
 def open_click():
@@ -342,7 +357,7 @@ dis_label = tk.Label(root,text='Distance',bg=GUI_color)
 dis_label.place(x= 770,y=5)
 
 #Tạo ô hiển thị cho Distance 
-dis_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white')
+dis_display = tk.Label(root,relief=tk.SUNKEN,anchor=tk.W,padx=10,bg='white',font=('Arial',13,'bold'))
 dis_display.place(x=770,y=30,height=30,width=100)
 
 #Tạo nhãn hiển thị đơn vị cho Distance
@@ -463,53 +478,369 @@ auto_fr_label.place(x= 10, y = 455)
 auto_frame = tk.Frame(root,height=265,width=530,highlightthickness=2,highlightbackground='#241468',bg=manu_color)
 auto_frame.place(x=10,y=495)
 
-# Tạo nhãn ô nhập đi thẳng
-linear_motion_label = tk.Label(auto_frame,text ='Vertical Movement',bg=manu_color)
-linear_motion_label.place(x= 10, y=10)
+''' Phần ô ghi tọa độ'''
 
-#Tạo Entry nhập số m muốn xe đi chuyển
-linear_entry = tk.Entry(auto_frame,relief=tk.SUNKEN,justify='center',state='disabled')
-linear_entry.place(x=10,y=40,height=30,width=150)
-objects_4.append(linear_entry)
+# Tạo nhãn ô nhập X
+X_label = tk.Label(auto_frame,text ='X',bg=manu_color)
+X_label.place(x= 10, y=10)
 
-def go_straight():
-    desired_pos = 0
-    direction = b'T'
-     
-    distance_value = float(distance[1:].replace('\x00', ''))
+#Tạo Entry X
+X_entry = tk.Entry(auto_frame,relief=tk.SUNKEN,justify='center',state='disabled',font=('Arial',13,'bold'))
+X_entry.place(x=10,y=40,height=30,width=150)
+objects_4.append(X_entry)
 
-    if linear_entry.get() != '':
-        desired_pos = float(linear_entry.get())
-        if desired_pos < 0:
-            direction = b'L'
-    
-    if desired_pos<0:
-        direction = b'L'
+# Tạo nhãn cho ô Y
+Y_label = tk.Label(auto_frame,text ='Y',bg=manu_color)
+Y_label.place(x=200, y= 10 )
+
+# Tạo ô ghi Y
+Y_entry = tk.Entry(auto_frame,relief=tk.SUNKEN,justify='center',state='disabled',font=('Arial',13,'bold'))
+Y_entry.place(x=200, y= 40, height=30,width=150)
+objects_4.append(Y_entry)
+
+'''-----------ooo----------'''
+
+''' tạo bảng hiển thị danh sách các điểm'''
+#create the frame
+style=ttk.Style()
+style.theme_use('default')
+style.configure('Treeview',
+                background='white',
+                foreground='black',
+                rowheight=30)
+style.configure("Treeview.Heading", font=('Arial', 10, 'bold'),background='#A6FF96',foreground='black')
+style.map('Treeview',background=[('selected', 'grey')])
+
+# Tạo bảng để hiển thị các giá trị
+tree = ttk.Treeview(auto_frame, columns=("Index", "X", "Y"), show="headings")
+tree.heading("Index", text="Index")
+tree.heading("X", text="X")
+tree.heading("Y", text="Y")
+
+# Thiết lập độ rộng cho từng cột
+tree.column("Index", width=120, anchor="center")
+tree.column("X", width=120, anchor="center")
+tree.column("Y", width=120, anchor="center")
+
+tree.place(x=10, y=85, height=170, width=363)
+
+'''------ooo----'''
+
+# Điểm đầu của xe
+init =(0.0,0.0)
+
+# Mảng để lưu các điểm
+points = [init]
+
+# Hàm nút set
+def set_click():
+
+    global points,run 
+    # Set no go
+    run = False
+
+    # Lấy giá trị từ các ô nhập liệu
+    x = X_entry.get()
+    y = Y_entry.get()
+
+    # Tọa độ điểm 
+    entry_point=(float(x),float(y))
+
+    # Thêm các điểm vào mảng
+    points.append(entry_point)
+
+    # Hiển thị các giá trị trong bảng
+    tree.delete(*tree.get_children())
+    for i, point in enumerate(points):
+        index = i
+        x = point[0]
+        y = point[1]
+        # Thêm dữ liệu vào cây và gắn đường kẻ cho từng cột
+        if index % 2 == 0:
+            tree.insert("", "end", values=(index, x, y), tags=('evenrow',))
+        else:
+            tree.insert("", "end", values=(index, x, y), tags=('oddrow',))
+
+    # Cấu hình lại màu nền cho các hàng
+    tree.tag_configure("evenrow", background="white")
+    tree.tag_configure("oddrow", background="lightblue")
+    print(points)
+
+# Tạo nút SET điểm
+set_btn = tk.Button(auto_frame,text='Set',bg='white',state='disabled',command=set_click)
+set_btn.place(x=390,y=40,height=30,width=50)
+objects_4.append(set_btn)
+
+# Hàm cho nút Delete
+def delete_click():
+    global points
+    if points:
+        points.pop()
+
+    # Hiển thị các giá trị trong bảng
+    tree.delete(*tree.get_children())
+    for i, point in enumerate(points):
+        index = i 
+        x = point[0]
+        y = point[1]
+       # Thêm dữ liệu vào cây và gắn đường kẻ cho từng cột
+        if index % 2 == 0:
+            tree.insert("", "end", values=(index, x, y), tags=('evenrow',))
+        else:
+            tree.insert("", "end", values=(index, x, y), tags=('oddrow',))
+
+    # Cấu hình lại màu nền cho các hàng
+    tree.tag_configure("evenrow", background="white")
+    tree.tag_configure("oddrow", background="lightblue")
+  
+
+# Tạo nút Delete
+delete_btn = tk.Button(auto_frame,text='Delete',bg='white',state='disabled',command=delete_click)
+delete_btn.place(x=460,y=40,height=30,width=50)
+objects_4.append(delete_btn)
+
+# Hàm nút Clear
+def clear_click():
+    global points
+    points=[init]
+    X_entry.delete(0, 'end')
+    Y_entry.delete(0,'end')
+
+    # Xóa tất cả các mục trong cây
+    tree.delete(*tree.get_children())
+   
+# Tạo nút Clear 
+clear_btn = tk.Button(auto_frame,text= 'Clear',bg='white',command = clear_click,state='disabled')
+clear_btn.place(x=460,y=80,height=30,width=50)
+objects_4.append(clear_btn)
+
+''' tính toán quãng đường từ các tọa độ điểm'''
+def calculate_total_length(arr):
+    total_length = 0
+    length_list = []
+    length_incremental = []
+    for i in range(len(arr) - 1):
+        a1 = np.array(arr[i])
+        a2 = np.array(arr[i+1])
+        direction_A = a2 - a1
+        length = np.linalg.norm(direction_A)
+        total_length += length
+        length_incremental.append(total_length) 
+        length_list.append(length)
+
+    return total_length, length_list, length_incremental
+'''-----ooo-----'''
+
+''' tính toán góc quay giữa các tọa độ điểm'''
+def calculate_total_angle(arr):
+    angle_array = []
+    if len(arr) < 2:
+        return angle_array
+
+    a1 = np.array(arr[0])
+    a2 = np.array(arr[1])
+
+    # Tính góc ban đầu của xe 
+    direction_A = [arr[0][0],1]
+    direction_B = a2 - a1
+    normalized_direction_A = direction_A / np.linalg.norm(direction_A)
+    normalized_direction_B = direction_B / np.linalg.norm(direction_B)
+    angle_first = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
+    angle_first_deg = np.degrees(angle_first)
+    if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+        angle_array.append(angle_first_deg) 
     else:
+        angle_array.append(-angle_first_deg) 
+
+
+    for i in range(len(arr) - 2):
+
+        # Chuyển đổi các vector thành dạng numpy array
+        a1 = np.array(arr[i])
+        a2 = np.array(arr[i+1])
+        a3 = np.array(arr[i+2])
+
+        # Tính toán vector hướng của đường thẳng A và B
+        direction_A = a2 - a1
+        direction_B = a3 - a2
+
+        # Chuẩn hóa vector hướng
+        normalized_direction_A = direction_A / np.linalg.norm(direction_A)
+        normalized_direction_B = direction_B / np.linalg.norm(direction_B)
+
+        # Tính toán góc giữa hai vector
+        angle_rad = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
+        angle_deg = np.degrees(angle_rad)
+        if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+            angle_array.append(angle_deg) 
+        else:
+            angle_array.append(-angle_deg) 
+        
+    return angle_array
+'''-----ooo-----'''
+
+'''điều xung theo góc cho bánh trước'''
+MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
+STRAIGHT_pulse = 10000 # bánh đánh thẳng
+MIN_right_pulse = 0 # bánh đánh hết sang phải
+Max_steering = 38 # góc quay tối đa qua một bên
+
+def adjust_front_pulse(desired,actual,change):
+    sub = desired - actual
+    # điều xung cho quay bên trái
+    if sub==0 and sub<= abs(change)/2:
+        pulse = STRAIGHT_pulse
+    elif sub > abs(change)/2 and sub>2:
+        pulse = MAX_left_pulse
+
+    # điều xung cho quay bên phải
+    if sub>=-abs(change/2) and sub<=0:
+        pulse = STRAIGHT_pulse
+    elif sub <-abs(change)/2 and sub<-2:
+        pulse = MIN_right_pulse
+    
+    return pulse
+    
+'''----oooo----'''
+
+'''điều tốc độ quay motor bánh trước'''
+MAX_steering_speed = 100
+MID_steering_speed = 50
+Min_steering_speed = 40
+
+def adjust_front_speed(desired,actual):
+
+    # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
+    if abs(desired-actual)>45:
+        speed = MAX_steering_speed
+    elif abs(desired - actual) >=15 and abs(desired-actual)<=45:
+        speed = MID_steering_speed
+    elif abs(desired - actual)>=0 and abs(desired-actual)<15:
+        speed = Min_steering_speed
+
+    return speed
+'''------oooo-----'''
+# cờ chạy
+run = False
+
+'''điểu khiển bánh trước sau chạy auto'''
+achieved_length = 0 # biển để lưu total length sau khi kết thúc
+actual_dis_p = 0 # lưu giá trị thực tế sau khi kết thúc 
+back_speed = 0 # giá trị tốc độ của bánh sau
+displaced_angle = 0 # giá trị góc mong muốn
+actual_angle_p=0 #lưu giá trị góc của xe khi kết thúc một chu trình chạy
+
+def car_auto_control():
+    global achieved_length,actual_dis_p,init
+    global run,points,back_speed
+    global displaced_angle,actual_angle_p
+
+    if run:
+        required_length, length_list, length_incremental = calculate_total_length(points) 
+        angle_list = calculate_total_angle(points)
+
+        actual_dis =  float(distance[1:].replace('\x00', ''))
+        actual_angle = float(angle[1:].replace('\x00', ''))
+
+        total_length = achieved_length + required_length
+        desired_angle = float(actual_angle_p + displaced_angle)
+
         direction = b'T'
 
-    if distance_value < desired_pos:
-        flag = 1
-    else:
-        flag = 0
+        if actual_dis<total_length:
 
-    flag_transmit = str(flag)
-    uart_data = b_start_bit + direction + flag_transmit.encode('utf-8') + stop_bit
-    b_uart.write(uart_data)
+            displacement = 0 # độ dời
+            for i in range(len(length_list)):
+                if (actual_dis <= length_list[i]):
+                    displaced_angle = angle_list[0]
+                    break
+
+                for j in range (len(angle_list)):
+                    if (actual_dis >= actual_dis_p) and (actual_dis < actual_dis_p + length_list[0]):
+                        if actual_dis == actual_dis_p:
+                            actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                        displaced_angle = angle_list[0] # độ dời góc
+                        break
+
+                    elif actual_dis>= (actual_dis_p + displacement):
+                        if j+1<len(angle_list):
+                            if actual_dis == actual_dis_p + displacement:
+                                actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                            displaced_angle = angle_list[j+1] # độ dời góc
+                            break
+                   
+
+            if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
+                back_speed = 50
+            elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-1):
+                if (actual_angle-desired_angle>=-1) and (actual_angle-desired_angle<=1):
+                    back_speed = 30 # xe đi thẳng chạy tốc 30
+                else:
+                    back_speed = 35 # xe rẽ chạy tốc 50
+            else: 
+                back_speed = 0
+            
+        else:
+            achieved_length = total_length # lưu lại tổng độ dài quãng đường đi được
+            actual_dis_p = actual_dis # lưu lại quãng đường thực tế
+            init = points[len(points)-1] # lưu tọa độ kết thúc của 1 chu trình
+            points =[init] 
+            run = False
+
+        # UART cho bánh trước
+        front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
+        front_speed = chr(adjust_front_speed(desired_angle,actual_angle))
+        f_uart_data = f_start_bit + front_speed.encode('utf-8') + front_pulse.encode('utf-8') + stop_bit
+        f_uart.write(f_uart_data)
+
+        #UART cho bánh sau
+        b_speed_str = str(back_speed)
+        b_uart_data = b_start_bit + direction + b_speed_str.encode('utf-8') + stop_bit
+        b_uart.write(b_uart_data)
+  
+    root.after(150, car_auto_control)
+'''------ooo------'''
 
 def go_click():
-    threading.Thread(target = go_straight).start()
-        
+    global run 
+    run = True
+    threading.Thread(target=car_auto_control).start() 
+
 # Tạo nút Go
 go_btn = tk.Button(auto_frame,text = 'Go',bg='white',command=go_click,state='disabled')
-go_btn.place(x=170, y= 40,height=30,width=50)
+go_btn.place(x=390, y= 80,height=30,width=50)
 objects_4.append(go_btn)
+
+lines = []
+# Hàm khi ấn nút Emergency Button 
+def em_click():
+
+    brake_adc_emer = b'100'
+    brake_emer = p_start_bit + brake_adc_emer + stop_bit
+    lines.append(brake_emer)
+
+    back_emer = b_start_bit + back_adc + stop_bit
+    lines.append(back_emer)
+
+    for line in lines:
+        emer_uart.write(line)
+
+# Mở ảnh
+emer = PhotoImage(file = emergency_stop)
+
+# Emergency Stop button for manual mode creation
+emer_button = tk.Button(auto_frame,image = emer, bg= manu_color, borderwidth=0, state='disabled',command = em_click )
+emer_button.place(x=420, y=155, width=100, height=100)
+objects_4.append(emer_button)
 
 ''' Chức năng manual'''
 # Hàm chức năng cho nút Manual
 def manual_click():
     for obj in objects_1:
         obj['state'] = 'normal'
+
+    for obj in objects_4:
+        obj['state'] = 'disabled'
 
 # Tạo nút Manual
 btn_manu = tk.Button(root, text='Manual', state='disabled',bg='white',command= manual_click)
@@ -649,15 +980,13 @@ objects_1.append(linear_scale)
 front_frame = tk.Frame(manu_frame,height=85, width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
 front_frame.place(x=205,y=40)
 
-# Start bit for UART transmission on the front wheel
-f_start_bit = b'F'
-
 ''' Code cho tạo thanh trượt rẽ trái phải'''
 #truyền UART bánh trước
 def turn_slide(value):
     
-    turn_adc = str(int(value))
-    uart_data = f_start_bit + turn_adc.encode('utf-8') + stop_bit    
+    turn_adc = str(int(value)*2000/200)
+    turn_speed = chr(70)
+    uart_data = f_start_bit + turn_speed.encode('utf-8') + turn_adc.encode('utf-8') + stop_bit    
     if f_uart.is_open:
         f_uart.write(uart_data)  
 
@@ -667,7 +996,6 @@ turn_scale = tk.Scale(front_frame, from_=0, to=200, orient=tk.HORIZONTAL,bg='whi
 turn_scale.place(x = 5, y= 5, height= 70, width = 300)
 turn_scale.set(100)
 objects_1.append(turn_scale)
-
 
 '''Tạo frame cho phanh'''
 brake_frame = tk.Frame(manu_frame,height=90,width=315,bg=manu_color,highlightbackground='#645CAA',highlightthickness=2)
@@ -732,34 +1060,11 @@ brake_slide.set(0)
 brake_slide.place(x=85,y=10,width=220,height=70)
 objects_1.append(brake_slide)
 
-''' Code for Emergency Stop button in Manual Control '''
-
-lines = []
-
-# Hàm khi ấn nút Emergency Button 
-def ma_em_click():
-
-    brake_adc_emer = b'100'
-    brake_emer = p_start_bit + brake_adc_emer + stop_bit
-    lines.append(brake_emer)
-
-    back_emer = b_start_bit + back_adc + stop_bit
-    lines.append(back_emer)
-
-    for line in lines:
-        emer_uart.write(line)
-
-# Mở ảnh
-manu_emer = PhotoImage(file = emergency_stop)
-
-# Emergency Stop button for manual mode creation
-manu_emer_button = tk.Button(auto_frame,image = manu_emer, bg= manu_color, borderwidth=0, state='disabled',command = ma_em_click )
-manu_emer_button.place(x=420, y=10, width=100, height=100)
-objects_4.append(manu_emer_button)
-
+''' Code để vẽ đồ thị '''
 # Khởi tạo đồ thị
 fig = Figure()
 
+# Vẽ theo góc quay xe
 ax1 = fig.add_subplot(2, 1, 1)
 ax1.set_title('Car Trajectory')
 ax1.set_xlabel('Time')
@@ -769,7 +1074,7 @@ ax1.set_xlim(0, 100)
 ax1.set_ylim(-190, 190)       
 line1, = ax1.plot([], [], 'g')
 
-
+# Vẽ theo kinh độ và vĩ độ
 ax2 = fig.add_subplot(2,1,2)
 ax2.set_title('Car Position')
 ax2.set_xlabel('Longitude')
@@ -785,8 +1090,9 @@ canvas.get_tk_widget().place(x=560, y=170, height=590, width=770)
 # Điều chỉnh vị trí của đồ thị
 fig.tight_layout()
 
-# Mảng lưu các giá trị angles
+# Mảng lưu các giá trị angles, distances
 angles = []
+distances = []
 
 # Biến cờ cho đồ thị
 run = False
@@ -794,47 +1100,53 @@ run = False
 # Hàm cập nhật dữ liệu nối tiếp và vẽ đồ thị
 def update_plot():
     global run
-
+ 
     if run==True:
-        # Đọc dữ liệu từ vi điều khiển qua UART
+        # Đọc UART 
         data = ang_uart.readline().decode().strip()
+        # Kiểm tra biến đầu và trích xuất giá trị
         if data.startswith('Y'):
-            angle = float(data[1:])
-        
+            angle_value = float(data[1:])
+
         # Kiểm tra nếu danh sách angles có quá nhiều giá trị, chỉ giữ lại 100 giá trị gần nhất
             if len(angles) < 100:
                 # Thêm giá trị mới vào danh sách
-                angles.append(angle)
+                angles.append(angle_value)
             else:
                 angles.pop(0)  # Xóa phần tử đầu tiên
-                angles.append(angle)  # Thêm giá trị mới vào cuối danh sách
+                angles.append(angle_value)  # Thêm giá trị mới vào cuối danh sách
         
         # Xóa dữ liệu cũ trên đồ thị
         ax1.clear()
         
-        # Vẽ đồ thị
+        # Vẽ đồ thị 1
         ax1.plot(range(len(angles)), angles, 'g')
         ax1.set_title('Car Trajectory')
-        ax1.set_xlabel('Time')
+        ax1.set_xlabel('Distance')
         ax1.set_ylabel('Angle')
         ax1.grid(True)
         ax1.set_xlim(0, 100)
         ax1.set_ylim(-190, 190)
         
         # Cập nhật đồ thị
-        canvas.draw()
-    
-    # Gọi lại hàm update_plot mỗi 100ms
-    root.after(100, update_plot)
-
-# Hàm cho nút Start
-def start_click():
+        canvas.draw() 
+   
+def start():
     global run
     run = True
+    update_plot()
 
+    # Gọi lại hàm start mỗi 150ms
+    root.after(150, start)
+
+# Hàm nút Start
+def start_click():
+    # phân luồng để vẽ đồ thị
+    threading.Thread(target = start).start()
+    
 # Nút start vẽ đồ thị 
 start_btn = tk.Button(root, text = 'Start',bg='white',command = start_click,state='disabled')
-start_btn.place(x=770,y = 90,height=30,width=80)
+start_btn.place(x=780,y = 90,height=30,width=80)
 objects_2.append(start_btn)
 
 def stop_click():
@@ -843,11 +1155,8 @@ def stop_click():
 
 # Nút Stop vẽ đồ thị
 stop_btn = tk.Button(root,text ='Stop',bg='white',command=stop_click,state='disabled')
-stop_btn.place(x =855,y=90,height=30,width=80 )
+stop_btn.place(x=880,y=90,height=30,width=80 )
 objects_2.append(stop_btn)
-
-# Gọi hàm update_plot để bắt đầu cập nhật và vẽ đồ thị
-update_plot()
 
 # Chạy vòng lặp giao diện
 root.mainloop()

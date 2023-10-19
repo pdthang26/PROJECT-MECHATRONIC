@@ -17,17 +17,19 @@ typedef struct
 	uint16_t PIN_TRIG;
 	GPIO_TypeDef* GPIOx_ECHO;
 	uint16_t PIN_ECHO;
-	uint32_t pulseValue;
+	uint16_t pulseValue;
 	float distance_mm;
+	uint8_t error;
 	
 }SR04_Name;
 
 
-uint32_t state = 1;
 
 void Init_SR04x(SR04_Name* SR04_x,TIM_HandleTypeDef *htim, TIM_TypeDef* TIMx, GPIO_TypeDef* GPIOx_trig, uint16_t pinTrig, GPIO_TypeDef* GPIOx_echo,uint16_t pinEcho);
 
 void readPulseDuration (SR04_Name* SR04_x);
+
+void readDistance (SR04_Name* SR04_x,uint32_t timeout);
 
 
 
