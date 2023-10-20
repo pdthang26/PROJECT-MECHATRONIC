@@ -690,23 +690,25 @@ def adjust_front_pulse(desired,actual,change):
     # điều xung cho quay bên trái
     if sub==0 and sub<= abs(change)/2:
         pulse = STRAIGHT_pulse
+        return pulse
     elif sub > abs(change)/2 and sub>2:
         pulse = MAX_left_pulse
+        return pulse
 
     # điều xung cho quay bên phải
     if sub>=-abs(change/2) and sub<=0:
         pulse = STRAIGHT_pulse
+        return pulse
     elif sub <-abs(change)/2 and sub<-2:
         pulse = MIN_right_pulse
-    
-    return pulse
+        return pulse
     
 '''----oooo----'''
 
 '''điều tốc độ quay motor bánh trước'''
 MAX_steering_speed = 100
-MID_steering_speed = 50
-Min_steering_speed = 40
+MID_steering_speed = 40
+Min_steering_speed = 30
 
 def adjust_front_speed(desired,actual):
 
@@ -751,11 +753,8 @@ def car_auto_control():
 
             displacement = 0 # độ dời
             for i in range(len(length_list)):
-                if (actual_dis <= length_list[i]):
-                    displaced_angle = angle_list[0]
-                    break
-
                 for j in range (len(angle_list)):
+                    displacement += length_list[i]
                     if (actual_dis >= actual_dis_p) and (actual_dis < actual_dis_p + length_list[0]):
                         if actual_dis == actual_dis_p:
                             actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
@@ -768,7 +767,7 @@ def car_auto_control():
                                 actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
                             displaced_angle = angle_list[j+1] # độ dời góc
                             break
-                   
+                
 
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
                 back_speed = 50
@@ -786,6 +785,8 @@ def car_auto_control():
             init = points[len(points)-1] # lưu tọa độ kết thúc của 1 chu trình
             points =[init] 
             run = False
+        print('dis', actual_dis)
+        print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
 
         # UART cho bánh trước
         front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))

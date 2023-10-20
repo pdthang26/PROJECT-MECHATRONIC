@@ -83,7 +83,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
   * @retval int
   */
 int main(void)
-{
+
+	{
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */

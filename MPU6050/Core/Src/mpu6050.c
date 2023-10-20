@@ -50,9 +50,14 @@
 // Setup MPU6050
 #define MPU6050_ADDR 0xD0
 const uint16_t i2c_timeout = 100;
-const double Accel_X_corrector = 16348.0;
-const double Accel_Y_corrector = 16348.0;
-const double Accel_Z_corrector = 16348.0;
+const double Accel_X_corrector = 8192.0;
+const double Accel_Y_corrector = 8192.0;
+const double Accel_Z_corrector = 8192.0;
+
+const double Gyro_X_corrector = 32.8;
+const double Gyro_Y_corrector = 32.8;
+const double Gyro_Z_corrector = 32.8;
+
 uint16_t time = 0;
 uint16_t lastTime = 0;
 double dt;
@@ -100,14 +105,14 @@ uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx)
 				// XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> � 4g  ~  0000 1000  ~ 0x08 8192
 				// XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> � 8g  ~  0001 0000  ~ 0x10 4096
 				// XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> � 16g ~  0001 1000  ~ 0x18 2048
-				Data = 0x00;
+				Data = 0x08;
 				HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, ACCEL_CONFIG_REG, 1, &Data, 1, i2c_timeout);
 				// Set Gyroscopic configuration in GYRO_CONFIG Register
 				// XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=0 -> � 250 �/s      ~  0000 0000  ~ 0x00 131
 				// XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=1 -> � 500 �/s      ~  0000 1000  ~ 0x08 65.5
 				// XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=2 -> � 1000 �/s   ~  0001 0000  ~ 0x10 32.8
 				// XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=3 -> � 2000 �/s   ~  0001 1000  ~ 0x18 16.4
-				Data = 0x00;
+				Data = 0x10;
 				HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, i2c_timeout);
 				
 				Data = 0x01;
@@ -124,7 +129,7 @@ void MPU6050_Calculation_offset_Gryo(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStr
 	// Read 6 BYTES of data starting from GYRO_XOUT_H register
 	HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, 0x47, 1, Rec_Data, 2, i2c_timeout);
 	regGryoZ =(int16_t)(Rec_Data[0] << 8 | Rec_Data[1]);
-	DataStruct->gyroZoffset += (double)(regGryoZ / 131.0);
+	DataStruct->gyroZoffset += (double)(regGryoZ / Gyro_Z_corrector);
 	
 }
 
@@ -167,9 +172,9 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
          I have configured FS_SEL = 0. So I am dividing by 131.0
          for more details check GYRO_CONFIG Register              ****/
 
-    DataStruct->Gx = DataStruct->Gyro_X_RAW / 131.0;
-    DataStruct->Gy = DataStruct->Gyro_Y_RAW / 131.0;
-    DataStruct->Gz = DataStruct->Gyro_Z_RAW / 131.0;
+    DataStruct->Gx = DataStruct->Gyro_X_RAW / Gyro_X_corrector;
+    DataStruct->Gy = DataStruct->Gyro_Y_RAW / Gyro_Y_corrector;
+    DataStruct->Gz = DataStruct->Gyro_Z_RAW / Gyro_Z_corrector;
 }
 
 void MPU6050_Read_Temp(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
@@ -206,9 +211,9 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     DataStruct->Ay = DataStruct->Accel_Y_RAW / Accel_Y_corrector;
     DataStruct->Az = DataStruct->Accel_Z_RAW / Accel_Z_corrector;
     DataStruct->Temperature = (float)((int16_t)temp / (float)340.0 + (float)36.53);
-    DataStruct->Gx = DataStruct->Gyro_X_RAW / 131.0;
-    DataStruct->Gy = DataStruct->Gyro_Y_RAW / 131.0;
-    DataStruct->Gz = DataStruct->Gyro_Z_RAW / 131.0;
+    DataStruct->Gx = DataStruct->Gyro_X_RAW / Gyro_X_corrector;
+    DataStruct->Gy = DataStruct->Gyro_Y_RAW / Gyro_Y_corrector;
+    DataStruct->Gz = DataStruct->Gyro_Z_RAW / Gyro_Z_corrector;
 
     // Kalman angle solve
     lastTime = time ;

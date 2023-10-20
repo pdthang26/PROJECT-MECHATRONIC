@@ -30,7 +30,7 @@ VD:
 //=============================================================================================
 #include "SR04.h"
 
-float velocityOfUltrasonic = 0.380; //(mm/mirosecond)
+float velocityOfUltrasonic = 0.343; //(mm/mirosecond)
 	
 uint32_t state = 1;
 
@@ -141,7 +141,11 @@ void readDistance (SR04_Name* SR04_x,uint32_t timeout)
         }
 				else SR04_x -> error = 0;
 		}
-		if(SR04_x -> error ==0)  SR04_x ->pulseValue  = (SR04_x->TIMx)->CNT ;
+		if(SR04_x -> error ==0)  
+		{
+			SR04_x ->pulseValue  = (SR04_x->TIMx)->CNT ;
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		}
 		SR04_x ->distance_mm = SR04_x ->pulseValue * velocityOfUltrasonic/2;
 
 	
