@@ -92,12 +92,12 @@ def calculate_total_angle(arr):
 # Ví dụ sử dụng:
 a0 = (0, 0)
 a1 = (0, 7)
-a2 = (5, 12)
-a3 = (0,17)
-a4 = (-2,25)
+a2 = (7, 7)
+# a3 = (-2,20)
+# a4 = (-2,25)
 
 
-arr = [a0,a1, a2,a3,a4]
+arr = [a0,a1,a2]
 
 fig, ax = plt.subplots()
 

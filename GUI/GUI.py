@@ -707,8 +707,8 @@ def adjust_front_pulse(desired,actual,change):
 
 '''điều tốc độ quay motor bánh trước'''
 MAX_steering_speed = 100
-MID_steering_speed = 40
-Min_steering_speed = 30
+MID_steering_speed = 50
+Min_steering_speed = 35
 
 def adjust_front_speed(desired,actual):
 
@@ -759,14 +759,14 @@ def car_auto_control():
                         if actual_dis == actual_dis_p:
                             actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
                         displaced_angle = angle_list[0] # độ dời góc
-                        break
+                        # break
 
                     elif actual_dis>= (actual_dis_p + displacement):
                         if j+1<len(angle_list):
                             if actual_dis == actual_dis_p + displacement:
-                                actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                                actual_angle_p = desired_angle # lưu giá trị thục tế tại các điểm
                             displaced_angle = angle_list[j+1] # độ dời góc
-                            break
+                            # break
                 
 
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
@@ -785,8 +785,10 @@ def car_auto_control():
             init = points[len(points)-1] # lưu tọa độ kết thúc của 1 chu trình
             points =[init] 
             run = False
+
         print('dis', actual_dis)
         print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
+        print('actual:',actual_angle,'    ',actual_angle_p)
 
         # UART cho bánh trước
         front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))

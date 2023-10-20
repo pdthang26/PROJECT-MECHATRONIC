@@ -53,21 +53,21 @@
 
 #     print(f"Tổng chiều dài đường đi: {total_distance}m")
 
-# # Các điểm và góc tương ứng
+# Các điểm và góc tương ứng
 # distance = [5, 5, 5]
 # angles = [0, 90, -90]
 
 # move_car(points, angles)
 
-a = [5,6,5]
-b= [0,90,-90]
+a = [7,7,7]
+b= [0,-45,90]
 
 
 d= 0 # actual_p
-e = 11# actual
+e = 7 # actual
 
 f = 0 # desired_p
-g = 16 # desired
+g = 21 # desired
 h= g+f #total_length
 
 speed = 0 # speed
@@ -80,22 +80,22 @@ act_ang_p =0
 MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
 STRAIGHT_pulse = 10000 # bánh đánh thẳng
 MIN_right_pulse = 0 # bánh đánh hết sang phải
-Max_steering = 38 # góc quay tối đa qua một bên
 
-def adjust_front_pulse(desired,actual):
+def adjust_front_pulse(desired,actual,change):
+    sub = desired - actual
 
     # điều xung cho quay bên trái
-    if desired - actual > 45:
+    if sub>=0 and sub <= abs(change)/2:
+        pulse = STRAIGHT_pulse
+    elif sub > abs(change)/2 and sub>2 :
         pulse = MAX_left_pulse
-    elif (desired - actual)>=0 and (desired - actual)<= 45:
-        pulse = STRAIGHT_pulse
-
+    
     # điều xung cho quay bên phải
-    if desired - actual <-45:
-        pulse = MIN_right_pulse
-    elif (desired - actual)>=-45 and (desired - actual)<=0:
+    if sub>=-abs(change/2) and sub <=0:
         pulse = STRAIGHT_pulse
-  
+    elif sub <-abs(change)/2 and sub <-2:
+        pulse = MIN_right_pulse
+   
     return pulse
 '''----oooo----'''
 
@@ -138,5 +138,5 @@ else:
     print('tổng trước:',f)
     print('thực tế trước:',d)
 
-pwm = adjust_front_pulse(desired,act_ang)
+pwm = adjust_front_pulse(desired,act_ang,angle)
 print('xung bánh trước:',pwm)
