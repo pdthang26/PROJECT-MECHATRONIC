@@ -65,3 +65,6 @@ float map(float inValue, float inMax, float inMin,float outMax, float outMin )
 		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
 	}
 }
+
+
+

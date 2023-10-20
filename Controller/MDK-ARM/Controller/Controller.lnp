@@ -6,6 +6,7 @@
 "controller\main.o"
 "controller\stm32f1xx_it.o"
 "controller\stm32f1xx_hal_msp.o"
+"controller\sr04.o"
 "controller\stm32f1xx_hal_gpio_ex.o"
 "controller\stm32f1xx_hal_can.o"
 "controller\stm32f1xx_hal.o"

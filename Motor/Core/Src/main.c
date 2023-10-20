@@ -39,6 +39,9 @@
 #define AUTO   							    0x01
 #define MANUAL 							    0x02
 
+#define ACCELERATION   					0x01
+#define DECELERATION 						0x02
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -106,6 +109,8 @@ float revolutions;
 //float output = 0.0;
 
 uint16_t out;
+uint8_t pre_setpoint = 0;
+float pre_mps;
 
 //double E, E1, E2;
 //double alpha, beta, gamma;
@@ -229,7 +234,11 @@ while (1)
 			sprintf(row2,"vel:%.2f :%d  ",mps, out);
 		}
 		else if((btnState>>2&0x01) == 0)
-		{			
+		{	
+			TxData[6] = 'R';
+			TxData[7] = 0;
+			WriteCAN(BRAKE,TxData);
+			
 			mode = MANUAL;
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
@@ -656,7 +665,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 // dieu khien dong co dua tren pid
 void dc_motor_control(float setpoint, float input, char dir)
 {
-	out = (uint16_t)map(setpoint, 100, 0, 4095, 2000 );
+	static uint8_t flag_state = 0;
+	
 	switch (dir)
 	{
 		case 'T':
@@ -678,11 +688,32 @@ void dc_motor_control(float setpoint, float input, char dir)
 	}
 	else 
 	{
+		out = (uint16_t)map(setpoint, 100, 0, 4095, 2000 );
 		MCP4725_I2C_SetValueDAC(&MCP4725, out);
-		TxData[6] = 'R';
+		
+		
+		// phat hien xe co giam toc hay khong giam toc khi co yeu cau
+		//=================================================================================================================================
+		uint8_t difference = (uint8_t)setpoint - pre_setpoint;// xem su thay doi cua tín hieu dau vao
+		
+		if(difference>0) flag_state = ACCELERATION;// neu gtri dau vao sau lon hon gtri dau vao truoc thi la tang toc
+		else if (difference<0) flag_state = DECELERATION;// neu gtri dau vao sau nho hon gtri dau vao truoc thi la giam toc
+		// trang thai giam toc
+		if (flag_state == DECELERATION) 
+		{			
+			if (mps < pre_mps) TxData[6] = 'G'; // neu toc do truoc do be hon toc do hien tai (tang toc) thi gui tin hieu yeu cau giam toc
+			else TxData[6] = 'R'; // neu toc neu toc do truoc do be hon toc do hien tai(giam toc) hoac bang (on dinh) thi ngung yeu cau giam toc
+		}
+		// trang thai tang toc
+		else if (flag_state == ACCELERATION) TxData[6] = 'R';// trang thai tang toc thi khong gui tin hieu yeu cau giam toc
+		//=================================================================================================================================
+		
+		
 		TxData[7] = 0;
 		WriteCAN(BRAKE,TxData);
 	}
+	pre_setpoint = (uint8_t)setpoint;
+	pre_mps = mps;
 }
 
 void WriteCAN(uint16_t ID,uint8_t *data)

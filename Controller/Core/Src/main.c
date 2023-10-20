@@ -128,7 +128,6 @@ void WriteCAN(uint16_t ID,uint8_t *data);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void assignUint32_tChar8byte(uint32_t value, char* buffer);
-uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void clearBuffer (uint8_t *buff);
 void updateData (uint8_t checkType,uint8_t *data);
@@ -192,6 +191,7 @@ int main(void)
 	HAL_UART_Receive_IT(&huart3, &buffer, 1);
 	
 	GPS_Init(&GPS1,&huart1);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -204,11 +204,11 @@ int main(void)
 		
 		
 		
-		sprintf(kinhdo,"%C:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
+		sprintf(kinhdo,"%c:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,0);
 		CLCD_I2C_WriteString(&LCD1,kinhdo);
 		
-		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value,dataCANvel.value);
+		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value, dataCANvel.value);
 		CLCD_I2C_SetCursor(&LCD1, 0,1);
 		CLCD_I2C_WriteString(&LCD1,vido);
 	
@@ -535,46 +535,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
-{
-    uint32_t startTime = HAL_GetTick();
-    uint32_t timeoutTime = startTime + timeout;
-    uint32_t lastTime;
-    uint32_t pulse = 0;
-    uint32_t inputState = 0;
-		uint32_t pulseWidth=0;
-    
-    if (state == 1)
-    {
-        inputState = GPIO_PIN_SET;
-    }
-    else if (state == 0)
-    {
-        inputState = GPIO_PIN_RESET;
-    }
-    
-    while (HAL_GPIO_ReadPin(GPIOA, pin) != inputState)
-    {
-        if (HAL_GetTick() > timeoutTime)
-        {
-            return 0;
-        }
-    }
-    
-    lastTime = TIM2->CNT;
-    
-    while (HAL_GPIO_ReadPin(GPIOA, pin) == inputState)
-    {
-        if (HAL_GetTick() > timeoutTime)
-        {
-            return 0;
-        }
-    }
-    
-    pulse = TIM2->CNT - lastTime;
-		pulseWidth = map(pulse,190,110,100,0);
-    return pulseWidth;
-}
+
 
 
 

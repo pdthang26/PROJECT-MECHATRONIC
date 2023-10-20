@@ -201,12 +201,12 @@
           <ItemText>\\Controller\../Core/Src/main.c\dataBuff</ItemText>
         </Ww>
         <Ww>
-          <count>8</count>
+          <count>10</count>
           <WinNumber>1</WinNumber>
           <ItemText>dataInFrontWheel</ItemText>
         </Ww>
         <Ww>
-          <count>9</count>
+          <count>11</count>
           <WinNumber>1</WinNumber>
           <ItemText>dataInBackWheel</ItemText>
         </Ww>

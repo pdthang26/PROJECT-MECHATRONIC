@@ -618,14 +618,17 @@ objects_4.append(clear_btn)
 def calculate_total_length(arr):
     total_length = 0
     length_list = []
+    length_incremental = []
     for i in range(len(arr) - 1):
         a1 = np.array(arr[i])
         a2 = np.array(arr[i+1])
         direction_A = a2 - a1
         length = np.linalg.norm(direction_A)
         total_length += length
+        length_incremental.append(total_length) 
         length_list.append(length)
-    return total_length, length_list
+
+    return total_length, length_list, length_incremental
 '''-----ooo-----'''
 
 ''' tính toán góc quay giữa các tọa độ điểm'''
@@ -683,25 +686,29 @@ MIN_right_pulse = 0 # bánh đánh hết sang phải
 Max_steering = 38 # góc quay tối đa qua một bên
 
 def adjust_front_pulse(desired,actual,change):
+    sub = desired - actual
     # điều xung cho quay bên trái
-    if desired - actual > abs(change)/2:
-        pulse = MAX_left_pulse
-    elif (desired - actual)>=0 and (desired - actual)<= abs(change)/2:
+    if sub==0 and sub<= abs(change)/2:
         pulse = STRAIGHT_pulse
+        return pulse
+    elif sub > abs(change)/2 and sub>2:
+        pulse = MAX_left_pulse
+        return pulse
 
     # điều xung cho quay bên phải
-    if desired - actual <-abs(change)/2:
-        pulse = MIN_right_pulse
-    elif (desired - actual)>=-abs(change/2) and (desired - actual)<=0:
+    if sub>=-abs(change/2) and sub<=0:
         pulse = STRAIGHT_pulse
-  
-    return pulse
+        return pulse
+    elif sub <-abs(change)/2 and sub<-2:
+        pulse = MIN_right_pulse
+        return pulse
+    
 '''----oooo----'''
 
 '''điều tốc độ quay motor bánh trước'''
 MAX_steering_speed = 100
 MID_steering_speed = 50
-Min_steering_speed = 40
+Min_steering_speed = 35
 
 def adjust_front_speed(desired,actual):
 
@@ -731,7 +738,7 @@ def car_auto_control():
     global displaced_angle,actual_angle_p
 
     if run:
-        required_length, length_list = calculate_total_length(points) 
+        required_length, length_list, length_incremental = calculate_total_length(points) 
         angle_list = calculate_total_angle(points)
 
         actual_dis =  float(distance[1:].replace('\x00', ''))
@@ -752,13 +759,15 @@ def car_auto_control():
                         if actual_dis == actual_dis_p:
                             actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
                         displaced_angle = angle_list[0] # độ dời góc
+                        # break
 
                     elif actual_dis>= (actual_dis_p + displacement):
                         if j+1<len(angle_list):
                             if actual_dis == actual_dis_p + displacement:
-                                actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
+                                actual_angle_p = desired_angle # lưu giá trị thục tế tại các điểm
                             displaced_angle = angle_list[j+1] # độ dời góc
-                   
+                            # break
+                
 
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
                 back_speed = 50
@@ -776,6 +785,10 @@ def car_auto_control():
             init = points[len(points)-1] # lưu tọa độ kết thúc của 1 chu trình
             points =[init] 
             run = False
+
+        print('dis', actual_dis)
+        print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
+        print('actual:',actual_angle,'    ',actual_angle_p)
 
         # UART cho bánh trước
         front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
