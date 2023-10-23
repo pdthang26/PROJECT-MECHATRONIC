@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import threading
 import numpy as np
+import pandas as pd
 
 # Đường dẫn tương đối của file
 
@@ -414,7 +415,7 @@ objects_3.append(gps_port)
 # Tạo ô chọn Baud Rate
 rate_port = ttk.Combobox(root, values=rate, state='disabled')
 rate_port.place(x=420, y=30, height=30, width=100)
-rate_port.set(rate[4])
+rate_port.set(rate[10])
 objects_3.append(rate_port)
 
 # Tạo ô chọn Data Bits
@@ -618,22 +619,22 @@ objects_4.append(clear_btn)
 def calculate_total_length(arr):
     total_length = 0
     length_list = []
-    length_incremental = []
     for i in range(len(arr) - 1):
         a1 = np.array(arr[i])
         a2 = np.array(arr[i+1])
         direction_A = a2 - a1
         length = np.linalg.norm(direction_A)
         total_length += length
-        length_incremental.append(total_length) 
-        length_list.append(length)
+        length_list.append(total_length)
 
-    return total_length, length_list, length_incremental
+    return total_length, length_list
 '''-----ooo-----'''
 
 ''' tính toán góc quay giữa các tọa độ điểm'''
 def calculate_total_angle(arr):
+    angle = 0
     angle_array = []
+    desired_array = []
     if len(arr) < 2:
         return angle_array
 
@@ -647,7 +648,7 @@ def calculate_total_angle(arr):
     normalized_direction_B = direction_B / np.linalg.norm(direction_B)
     angle_first = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
     angle_first_deg = np.degrees(angle_first)
-    if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+    if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] >= 0:
         angle_array.append(angle_first_deg) 
     else:
         angle_array.append(-angle_first_deg) 
@@ -671,12 +672,16 @@ def calculate_total_angle(arr):
         # Tính toán góc giữa hai vector
         angle_rad = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
         angle_deg = np.degrees(angle_rad)
-        if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+        if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] >= 0:
             angle_array.append(angle_deg) 
         else:
             angle_array.append(-angle_deg) 
-        
-    return angle_array
+
+    for j in range(len(angle_array)):
+        angle += angle_array[j]
+        desired_array.append(angle)
+
+    return angle_array,desired_array
 '''-----ooo-----'''
 
 '''điều xung theo góc cho bánh trước'''
@@ -687,88 +692,132 @@ Max_steering = 38 # góc quay tối đa qua một bên
 
 def adjust_front_pulse(desired,actual,change):
     sub = desired - actual
+    pulse= pulse_straight = 10000
+    pulse_desired = int((change/38)*10000)+10000
+
+    if pulse_desired>MAX_left_pulse:
+        pulse_desired = MAX_left_pulse
+    elif pulse_desired<0:
+        pulse_desired = MIN_right_pulse
+
     # điều xung cho quay bên trái
-    if sub==0 and sub<= abs(change)/2:
-        pulse = STRAIGHT_pulse
-        return pulse
-    elif sub > abs(change)/2 and sub>2:
-        pulse = MAX_left_pulse
+    if sub>= 0 and sub <= abs(change)/2:
+        if sub> 2:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub > 2 and sub> abs(change)/2:
+        pulse = pulse_desired
         return pulse
 
     # điều xung cho quay bên phải
-    if sub>=-abs(change/2) and sub<=0:
-        pulse = STRAIGHT_pulse
+    if sub>= -abs(change)/2 and sub <= 0:
+        if sub<-2:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub<-2 and sub<-abs(change)/2:
+        pulse = pulse_desired
         return pulse
-    elif sub <-abs(change)/2 and sub<-2:
-        pulse = MIN_right_pulse
-        return pulse
-    
+
+    return pulse
 '''----oooo----'''
 
 '''điều tốc độ quay motor bánh trước'''
-MAX_steering_speed = 100
+MAX_steering_speed = 75
 MID_steering_speed = 50
-Min_steering_speed = 35
+Min_steering_speed = 30
 
 def adjust_front_speed(desired,actual):
-
+    sub = abs(desired-actual)
     # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
-    if abs(desired-actual)>45:
+    if sub>38:
         speed = MAX_steering_speed
-    elif abs(desired - actual) >=15 and abs(desired-actual)<=45:
+    elif sub>10 and sub<=38:
         speed = MID_steering_speed
-    elif abs(desired - actual)>=0 and abs(desired-actual)<15:
+    elif sub>=0 and sub<=10:
         speed = Min_steering_speed
-
     return speed
 '''------oooo-----'''
+
+# Ghi dữ liệu vào file Excel với tên có số thứ tự
+def save_to_excel(data_list, counter):
+    data = {
+        'Desired Angle': [],
+        'Actual Angle': [],
+        'Desired Distance': [],
+        'Actual Distance':[]
+    }
+    for item in data_list:
+        data['a'].append(item['a'])
+        data['b'].append(item['b'])
+        data['c'].append(item['c'])
+        data['c'].append(item['c'])
+    df = pd.DataFrame(data)
+    filename = f'du_lieu_{counter}.xlsx'
+    df.to_excel(filename, index=False)
+
 # cờ chạy
 run = False
-
 '''điểu khiển bánh trước sau chạy auto'''
 achieved_length = 0 # biển để lưu total length sau khi kết thúc
 actual_dis_p = 0 # lưu giá trị thực tế sau khi kết thúc 
 back_speed = 0 # giá trị tốc độ của bánh sau
 displaced_angle = 0 # giá trị góc mong muốn
-actual_angle_p=0 #lưu giá trị góc của xe khi kết thúc một chu trình chạy
+desired_angle = 0 # góc mong muốn của xe
 
 def car_auto_control():
     global achieved_length,actual_dis_p,init
     global run,points,back_speed
-    global displaced_angle,actual_angle_p
+    global displaced_angle,desired_angle
 
     if run:
-        required_length, length_list, length_incremental = calculate_total_length(points) 
-        angle_list = calculate_total_angle(points)
+        required_length, length_list = calculate_total_length(points) 
+        change_angle_list,desired_angle_list = calculate_total_angle(points)
 
         actual_dis =  float(distance[1:].replace('\x00', ''))
         actual_angle = float(angle[1:].replace('\x00', ''))
 
         total_length = achieved_length + required_length
-        desired_angle = float(actual_angle_p + displaced_angle)
 
         direction = b'T'
 
         if actual_dis<total_length:
+        #     displacement_0 = 0 # độ dời
+        #     # cho góc mong muốn
+        #     for i in range(len(length_list)):
+        #         for j in range (len(desired_angle_list)):
+        #             displacement_0 += length_list[i] # độ dời quãng đường
+        #             if (actual_dis >= actual_dis_p) and (actual_dis< actual_dis_p + length_list[0]):
+        #                 desired_angle = desired_angle_list[0] #góc mong muốn
+        #             elif actual_dis >= (actual_dis_p + displacement_0):
+        #                 if j+1<len(desired_angle_list):
+        #                     desired_angle = desired_angle_list[j+1] #góc mong muốn
+        #                     print('j_0',j)
+        #             print('displacement_0',displacement_0)
 
-            displacement = 0 # độ dời
+        #     displacement_1 = 0 # độ dời
+        #     #cho độ dời góc
+        #     for i in range(len(length_list)):
+        #         for j in range (len(change_angle_list)):
+        #             displacement_1 += length_list[i] # độ dời quãng đường
+        #             if (actual_dis >= actual_dis_p) and (actual_dis< actual_dis_p + length_list[0]):
+        #                 displaced_angle = change_angle_list[0] # độ dời góc
+        #             elif actual_dis >= (actual_dis_p + displacement_1):
+        #                 if (j+1)<len(change_angle_list):
+        #                     displaced_angle = change_angle_list[j+1] # độ dời góc     
+            step = 0
             for i in range(len(length_list)):
-                for j in range (len(angle_list)):
-                    displacement += length_list[i]
-                    if (actual_dis >= actual_dis_p) and (actual_dis < actual_dis_p + length_list[0]):
-                        if actual_dis == actual_dis_p:
-                            actual_angle_p = actual_angle # lưu giá trị thục tế tại các điểm
-                        displaced_angle = angle_list[0] # độ dời góc
-                        # break
-
-                    elif actual_dis>= (actual_dis_p + displacement):
-                        if j+1<len(angle_list):
-                            if actual_dis == actual_dis_p + displacement:
-                                actual_angle_p = desired_angle # lưu giá trị thục tế tại các điểm
-                            displaced_angle = angle_list[j+1] # độ dời góc
-                            # break
-                
-
+                if actual_dis< actual_dis_p + length_list[i]:
+                    step = i
+                    break
+            desired_angle = desired_angle_list[step]
+            displaced_angle = change_angle_list[step]
+            
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
                 back_speed = 50
             elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-1):
@@ -788,7 +837,6 @@ def car_auto_control():
 
         print('dis', actual_dis)
         print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
-        print('actual:',actual_angle,'    ',actual_angle_p)
 
         # UART cho bánh trước
         front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
@@ -800,8 +848,9 @@ def car_auto_control():
         b_speed_str = str(back_speed)
         b_uart_data = b_start_bit + direction + b_speed_str.encode('utf-8') + stop_bit
         b_uart.write(b_uart_data)
-  
-    root.after(150, car_auto_control)
+
+        print(front_pulse)
+    root.after(50, car_auto_control)
 '''------ooo------'''
 
 def go_click():
