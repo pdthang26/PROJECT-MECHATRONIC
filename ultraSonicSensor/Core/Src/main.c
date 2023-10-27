@@ -83,8 +83,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
   * @retval int
   */
 int main(void)
-
-	{
+{
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -129,7 +128,8 @@ int main(void)
   while (1)
   {
 		
-		readDistance(&SR04_1, 35);
+		readDistance(&SR04_1, 100);
+		
 		
     /* USER CODE END WHILE */
 
@@ -316,7 +316,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }

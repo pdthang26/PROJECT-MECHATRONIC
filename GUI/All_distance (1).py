@@ -1,5 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math as m
+
+height_car = 2.1 #(m)
+width_car = 1.0 #(m)
+
+def cal_radius_rotary(angle):
+    r = height_car/ m.tan(angle)
+    return r
+
 
 def plot_lines_and_angle(a1, a2, a3, ax):
     # Vẽ đường thẳng A
@@ -56,7 +65,7 @@ def calculate_total_angle(arr):
     normalized_direction_B = direction_B / np.linalg.norm(direction_B)
     angle_first = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
     angle_first_deg = np.degrees(angle_first)
-    if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+    if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] >= 0:
         angle_array.append(angle_first_deg) 
     else:
         angle_array.append(-angle_first_deg) 
@@ -80,7 +89,7 @@ def calculate_total_angle(arr):
         # Tính toán góc giữa hai vector
         angle_rad = np.arccos(np.dot(normalized_direction_A, normalized_direction_B))
         angle_deg = np.degrees(angle_rad)
-        if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] > 0:
+        if direction_A[0] * direction_B[1] - direction_A[1] * direction_B[0] >= 0:
             angle_array.append(angle_deg) 
         else:
             angle_array.append(-angle_deg) 

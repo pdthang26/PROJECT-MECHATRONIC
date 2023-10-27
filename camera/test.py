@@ -1,25 +1,47 @@
 import cv2
 import numpy as np
 
-# Tạo hình ảnh trắng
-image = np.ones((500, 500, 3), dtype=np.uint8) * 255
 
-# Các điểm đầu vào
-points = np.array([[200, 100], [100, 200], [70, 300], [50, 400]])
+vat  = [[(12,15),(16,15)],[(34,15),(23,15)],[(12,15),(16,15)]]
+print(vat)
 
-# Chuyển đổi các điểm đầu vào thành đường cong
-curve = []
-for t in np.arange(0, 1, 0.01):
-    x = int((1 - t) ** 3 * points[0][0] + 3 * (1 - t) ** 2 * t * points[1][0] + 3 * (1 - t) * t ** 2 * points[2][0] + t ** 3 * points[3][0])
-    y = int((1 - t) ** 3 * points[0][1] + 3 * (1 - t) ** 2 * t * points[1][1] + 3 * (1 - t) * t ** 2 * points[2][1] + t ** 3 * points[3][1])
-    curve.append([x, y])
+# def fill_bounded_regions(frame, points):
+#     # Tạo một mảng NumPy từ danh sách các điểm
+#     points_array = np.array(points, np.int32)
 
-# Vẽ đường cong trên hình ảnh
+#     # Tạo mặt nạ (mask) từ đa giác bao quanh các điểm
+#     mask = np.zeros_like(frame)
+#     cv2.fillPoly(mask, [points_array], (0, 255, 0))
 
-curve = np.array(curve)
-cv2.polylines(image, [curve], False, (0, 255, 0), 2)
+#     # Áp dụng mặt nạ lên frame
+#     result = cv2.bitwise_and(frame, mask)
 
-# Hiển thị hình ảnh
-cv2.imshow("Curve", image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+#     return result
+
+# # Khởi tạo camera
+# cap = cv2.VideoCapture(0)
+
+# while True:
+#     # Đọc frame từ camera
+#     ret, frame = cap.read()
+
+#     # Nếu không đọc được frame, thoát khỏi vòng lặp
+#     if not ret:
+#         break
+
+#     # Mảng các điểm
+#     points = [(100, 100), (200, 100), (200, 200), (100, 200)]
+
+#     # Tô màu miền được bao quanh bởi các điểm trên frame
+#     result = fill_bounded_regions(frame, points)
+
+#     # Hiển thị frame với miền được tô màu
+#     cv2.imshow("Filled Regions", result)
+
+#     # Nhấn phím 'q' để thoát khỏi vòng lặp
+#     if cv2.waitKey(1) & 0xFF == ord('q'):
+#         break
+
+# # Giải phóng camera và đóng cửa sổ hiển thị
+# cap.release()
+# cv2.destroyAllWindows()
