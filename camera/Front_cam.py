@@ -72,10 +72,12 @@ camera = cv2.VideoCapture(0)
 ret, frame = camera.read()
 height, width, _ = frame.shape
 
-bottom_left = (int(width/2)-200, height)  # Điểm bottom-left nằm ở góc dưới bên trái
+print(frame.shape)
+
+bottom_left = (int(width/2)-210, height)  # Điểm bottom-left nằm ở góc dưới bên trái
 
 convergent_center = (int(width / 2), int(height / 2))  # Điểm top-center nằm ở giữa phía trên
-up_left = (int(width/2)-50, bottom_left[1]+int((convergent_center[1]-bottom_left[1])*((int(width/2)-50)-bottom_left[0])
+up_left = (int(width/2)-20, bottom_left[1]+int((convergent_center[1]-bottom_left[1])*((int(width/2)-20)-bottom_left[0])
                                                                                 /(convergent_center[0]-bottom_left[0])))
 
 
@@ -114,45 +116,47 @@ while True:
     point_right = np.array(mirror_draw(width,points_left))
     cv2.polylines(frame, [point_right], 0, (0, 255, 0), 2)
 
-    cv2.circle(frame,arr1[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr2[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr3[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr4[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr1[0],1,(0, 255, 0),2)
 
-    cv2.circle(frame,arr1[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr2[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr3[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr4[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr1[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr2[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr3[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr4[0],1,(0, 255, 0),2)
 
-    cv2.circle(frame,arr1[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr2[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr3[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr4[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr1[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr2[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr3[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr4[1],1,(255, 0, 0),2)
 
-    cv2.circle(frame,arr1[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr2[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr3[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr4[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr1[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr2[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr3[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr4[2],1,(255, 255, 0),2)
 
-    cv2.circle(frame,arr_point_5_left[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr_point_6_left[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr_point_7_left[0],1,(0, 255, 0),2)
-    cv2.circle(frame,arr_point_8_left[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr1[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr2[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr3[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr4[3],1,(0, 255, 255),2)
 
-    cv2.circle(frame,arr_point_5_left[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr_point_6_left[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr_point_7_left[1],1,(255, 0, 0),2)
-    cv2.circle(frame,arr_point_8_left[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr_point_5_left[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr_point_6_left[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr_point_7_left[0],1,(0, 255, 0),2)
+    # cv2.circle(frame,arr_point_8_left[0],1,(0, 255, 0),2)
 
-    cv2.circle(frame,arr_point_5_left[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr_point_6_left[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr_point_7_left[2],1,(255, 255, 0),2)
-    cv2.circle(frame,arr_point_8_left[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr_point_5_left[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr_point_6_left[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr_point_7_left[1],1,(255, 0, 0),2)
+    # cv2.circle(frame,arr_point_8_left[1],1,(255, 0, 0),2)
 
-    cv2.circle(frame,arr_point_5_left[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr_point_6_left[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr_point_7_left[3],1,(0, 255, 255),2)
-    cv2.circle(frame,arr_point_8_left[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr_point_5_left[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr_point_6_left[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr_point_7_left[2],1,(255, 255, 0),2)
+    # cv2.circle(frame,arr_point_8_left[2],1,(255, 255, 0),2)
+
+    # cv2.circle(frame,arr_point_5_left[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr_point_6_left[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr_point_7_left[3],1,(0, 255, 255),2)
+    # cv2.circle(frame,arr_point_8_left[3],1,(0, 255, 255),2)
     
     if angle > 0:
         curve_left = calculating_four_point_from_angle(angle,arr_point_1_left,arr_point_2_left,arr_point_3_left,arr_point_4_left)
@@ -169,19 +173,18 @@ while True:
     cv2.polylines(frame, [curve_left], 0, (255, 255, 0), 2)
 
     # Vẽ tam giác lên khung hình
-    # grid_size = (48, 64)  # Kích thước của đường lưới (số hàng, số cột)
-    # draw_grid(frame, grid_size)
+
 
     # Hiển thị khung hình
     cv2.imshow("Camera", frame)
-    if angle <=-38:
-        flag = 1
-    elif angle >=38:
-        flag = 0
-    if flag == 1:
-        angle +=1
-    elif flag ==0:
-        angle -=1
+    # if angle <=-38:
+    #     flag = 1
+    # elif angle >=38:
+    #     flag = 0
+    # if flag == 1:
+    #     angle +=1
+    # elif flag ==0:
+    #     angle -=1
     # Thoát khỏi vòng lặp nếu nhấn phím 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
