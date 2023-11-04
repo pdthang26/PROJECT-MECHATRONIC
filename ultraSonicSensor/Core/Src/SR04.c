@@ -34,7 +34,7 @@ float velocityOfUltrasonic = 0.343; //(mm/mirosecond)
 	
 uint32_t state = 1;
 
-uint32_t tim ;
+
 void Init_SR04x(SR04_Name* SR04_x,TIM_HandleTypeDef *htim, TIM_TypeDef* TIMx, GPIO_TypeDef* GPIOx_trig, uint16_t pinTrig, GPIO_TypeDef* GPIOx_echo,uint16_t pinEcho)
 {
 	
@@ -97,13 +97,11 @@ void readPulseDurationSR04 (SR04_Name* SR04_x,uint32_t timeout)
 
 void readDistance (SR04_Name* SR04_x,uint32_t timeout)
 {
-
+	uint8_t FLAG_TIMEOUT = 0;
 	uint32_t startTime = HAL_GetTick();
   uint32_t timeoutTime = startTime + timeout;
-  uint32_t lastTime;
-  uint32_t pulse = 0;
   uint32_t inputState = 0;
-	uint32_t pulseWidth=0;
+	
     
     if (state == 1)
     {
@@ -125,27 +123,34 @@ void readDistance (SR04_Name* SR04_x,uint32_t timeout)
     {
         if (HAL_GetTick() > timeoutTime)
         {
-					SR04_x->error = 1;
+					FLAG_TIMEOUT = 1;
 					break;
         }
-				else SR04_x -> error = 0;
     }
-		
+
     (SR04_x->TIMx)->CNT = 0;
     while (HAL_GPIO_ReadPin(SR04_x->GPIOx_ECHO, SR04_x->PIN_ECHO) == inputState)
     {
         if (HAL_GetTick() > timeoutTime)
         {
-					SR04_x->error = 2;
+					FLAG_TIMEOUT = 1;
 					break;
         }
-				else SR04_x -> error = 0;
+
 		}
-		if(SR04_x -> error ==0)  
+		
+		if((SR04_x->TIMx)->CNT <35000 && FLAG_TIMEOUT == 0 )  
 		{
 			SR04_x ->pulseValue  = (SR04_x->TIMx)->CNT ;
 			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			SR04_x -> error = 0;
 		}
+		else if( (SR04_x->TIMx)->CNT >= 35000 || FLAG_TIMEOUT ==1)
+		{
+			SR04_x -> error = 1;
+			SR04_x ->pulseValue  = 34986;
+		}
+
 		SR04_x ->distance_mm = SR04_x ->pulseValue * velocityOfUltrasonic/2;
 
 	

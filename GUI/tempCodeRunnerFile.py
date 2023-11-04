@@ -1,1 +1,2 @@
-displaced_angle
+plt.grid(True)
+plt.axis('equal')

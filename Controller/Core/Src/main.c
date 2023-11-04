@@ -22,8 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
-#include "gps.h"
-#include "CLCD_I2C.h"
 #include "convert_lib.h"
 /* USER CODE END Includes */
 
@@ -48,18 +46,13 @@
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan;
 
-I2C_HandleTypeDef hi2c1;
-
-TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 
-UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 // controller variable
-//uint32_t pulseWidthThro = 0, pulseWidthAile = 0;
-//uint32_t lastPulseWidthThro = 0, lastPulseWidthAile = 0;
+
 uint32_t back_adc_p = 0;
 uint32_t front_adc_p = 0;
 uint32_t brake_adc_p = 0;
@@ -93,12 +86,13 @@ dataCAN dataCANpos = {.type = 'P'};
 dataCAN dataCANyaw = {.type = 'Y'};
 
 
-char kinhdo[16];
-char vido[16];
-GPS_t GPS_NEO;
+//char kinhdo[16];
+//char vido[16];
 
-GPS_Name GPS1;
-CLCD_I2C_Name LCD1;
+//GPS_t GPS_NEO;
+
+//GPS_Name GPS1;
+//CLCD_I2C_Name LCD1;
 
 
 // CAN protocol variable
@@ -116,10 +110,7 @@ uint32_t              TxMailbox;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_CAN_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_I2C1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
@@ -168,15 +159,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM2_Init();
   MX_CAN_Init();
-  MX_USART1_UART_Init();
-  MX_I2C1_Init();
   MX_USART3_UART_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-	HAL_TIM_Base_Start(&htim2);
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 
@@ -186,11 +173,13 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 
-	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
+//	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
+	
+	
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_UART_Receive_IT(&huart3, &buffer, 1);
 	
-	GPS_Init(&GPS1,&huart1);
+//	GPS_Init(&GPS1,&huart1);
 	
   /* USER CODE END 2 */
 
@@ -204,13 +193,13 @@ int main(void)
 		
 		
 		
-		sprintf(kinhdo,"%c:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
-		CLCD_I2C_SetCursor(&LCD1, 0,0);
-		CLCD_I2C_WriteString(&LCD1,kinhdo);
-		
-		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value, dataCANvel.value);
-		CLCD_I2C_SetCursor(&LCD1, 0,1);
-		CLCD_I2C_WriteString(&LCD1,vido);
+//		sprintf(kinhdo,"%c:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
+//		CLCD_I2C_SetCursor(&LCD1, 0,0);
+//		CLCD_I2C_WriteString(&LCD1,kinhdo);
+//		
+//		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value, dataCANvel.value);
+//		CLCD_I2C_SetCursor(&LCD1, 0,1);
+//		CLCD_I2C_WriteString(&LCD1,vido);
 	
 	}
   /* USER CODE END 3 */
@@ -306,85 +295,6 @@ static void MX_CAN_Init(void)
 }
 
 /**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 720;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 65535;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-
-}
-
-/**
   * @brief TIM3 Initialization Function
   * @param None
   * @retval None
@@ -426,39 +336,6 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
-}
-
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
 
 }
 
@@ -564,40 +441,42 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	{
 		if(RxHeader.StdId==MASTER_ID)
 		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			if(RxData[3]== dataCANvel.type) dataCANvel.value = convert8ByteToFloat(RxData,4,7);
 			
-			else if(RxData[3]== dataCANpos.type) dataCANpos.value = convert8ByteToFloat(RxData,4,7);
+			if(RxData[3]== dataCANvel.type)
+			{
+				dataCANvel.value = convert8ByteToFloat(RxData,4,7);
+			}
 			
-			else if(RxData[3]== dataCANyaw.type) dataCANyaw.value = convert8ByteToFloat(RxData,4,7);
+			else if(RxData[3]== dataCANpos.type) 
+			{
+				dataCANpos.value = convert8ByteToFloat(RxData,4,7);
+			}
+			
+			else if(RxData[3]== dataCANyaw.type) 
+			{
+				dataCANyaw.value = convert8ByteToFloat(RxData,4,7);
+				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			}
 		}
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  
   if(htim -> Instance == TIM3){
-		
-	sprintf(data_d,"\nD%.1f",dataCANpos.value);
-	HAL_UART_Transmit(&huart3,(uint8_t*)data_d,sizeof(data_d),HAL_MAX_DELAY);
-		
-	sprintf(data_y,"\nY%.1f",dataCANyaw.value);
-	HAL_UART_Transmit(&huart3,(uint8_t*)data_y,sizeof(data_y),HAL_MAX_DELAY);	
-		
-	sprintf(data_v,"\nV%.1f",dataCANvel.value);
-	HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
-		
-	
+		sprintf(data_y,"\nY%.1f",dataCANyaw.value);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data_y,sizeof(data_y),HAL_MAX_DELAY);	
+		sprintf(data_d,"\nD%.1f",dataCANpos.value);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data_d,sizeof(data_d),HAL_MAX_DELAY);
+		sprintf(data_v,"\nV%.1f",dataCANvel.value);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
 	}
-
-
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	
-	if(huart->Instance == USART1) GPS_UART_CallBack(&GPS1,&GPS_NEO);
+//	if(huart->Instance == USART1) GPS_UART_CallBack(&GPS1,&GPS_NEO);
 	if(huart->Instance == USART3) 
 	{
 		if (buffer != 10)

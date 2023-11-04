@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/PROJECT-MECHATRONIC/Break/Core/Src",
-      "program": "d:/PROJECT-MECHATRONIC/Break/Core/Src/build/Debug/outDebug",
+      "cwd": "d:/PROJECT-MECHATRONIC/Controller/Core/Src",
+      "program": "d:/PROJECT-MECHATRONIC/Controller/Core/Src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
