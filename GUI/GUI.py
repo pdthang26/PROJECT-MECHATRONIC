@@ -65,7 +65,7 @@ stop_bit = b'\x0A'
 
 # Tạo cửa sổ giao diện chính
 root = tk.Tk()
-root.geometry("1340x770")
+root.geometry("1500x770")
 root.configure(bg=GUI_color)
 root.resizable(height=False, width=False)
 
@@ -77,7 +77,7 @@ objects_4 = [] # mảng để chứa elements được active bằng nút auto
 
 # Các biến dùng truyền UART
 emer_uart= b_uart= f_uart= p_uart= ang_uart= vel_uart= dis_uart = None
-gps_port = None
+ultra_uart=gps_port = None
 
 ''' Chức năng giao diện '''
 
@@ -91,7 +91,7 @@ def connect_uart():
     for obj in objects_2:
         obj['state'] = 'normal'
 
-    global b_uart,f_uart,p_uart
+    global b_uart,f_uart,p_uart,ultra_uart
     global ang_uart,vel_uart,dis_uart
     global emer_uart
     global gps_uart
@@ -143,7 +143,7 @@ def connect_uart():
     else:
         try:
             # Khởi tạo đối tượng Serial
-            emer_uart= ang_uart= vel_uart= dis_uart= b_uart= f_uart= p_uart =serial.Serial(
+            ultra_uart=emer_uart= ang_uart= vel_uart= dis_uart= b_uart= f_uart= p_uart =serial.Serial(
             port=selected_port,
             baudrate=selected_rate,
             stopbits=stop_bit_value,
@@ -151,15 +151,15 @@ def connect_uart():
             parity=parity_bit_value,
             timeout=time  # Timeout cho phép đọc từ giao diện UART
         )
-        #      #khởi tạo đối tượng Serial
-        #     gps_uart = serial.Serial(
-        #         port=selected_gps,
-        #         baudrate=9600,
-        #         stopbits= stop_bit_value,
-        #         bytesize= data_bit_value,
-        #         parity= parity_bit_value,
-        #         timeout=1
-        # )
+             #khởi tạo đối tượng Serial
+            gps_uart = serial.Serial(
+            port=selected_gps,
+            baudrate=9600,
+            stopbits= stop_bit_value,
+            bytesize= data_bit_value,
+            parity= parity_bit_value,
+            timeout=1
+        )
 
             # Hiển thị thông báo kết nối UART thành công 
             if b_uart.is_open:
@@ -232,37 +232,54 @@ def show_dis():
             dis_display['text'] = distance[1:].replace('\x00','') 
             break
 
-# # Hàm xử lý show GPS
-# def show_gps():
+# Hàm xử lý show GPS
+def show_gps():
+    try:
+        # Đọc dữ liệu UART về GPS
+        gps = gps_uart.readline().decode().strip()
 
-#     # Đọc dữ liệu UART về GPS
-#     gps = gps_uart.readline().decode().strip()
+        # Xử lý tín hiệu UART cho GPS
+        if gps.startswith('$GPRMC'):
+            data = gps.split(',')
+            if data[2] == 'A':
+                latitude_decimal = float(data[3])
+                longitude_decimal = float(data[5])
 
-#     # Xử lý tín hiệu UART cho GPS
-#     if gps.startswith('$GPRMC'):
-#         data = gps.split(',')
-#         if data[2] == 'A':
-#             latitude = data[3]
-#             longitude = data[5]
+                # Chuyển đổi độ phút giây
+                latitude_degrees = int(latitude_decimal / 100)
+                latitude_minutes = float((latitude_decimal % 100) / 60)
+                latitude = latitude_degrees + latitude_minutes
 
-#             # Chuyển đổi độ phút giây
-#             latitude_degrees = int(latitude_decimal // 100)
-#             latitude_minutes = (latitude_decimal % 100) / 60
-#             latitude = latitude_degrees + latitude_minutes
+                longitude_degrees = int(longitude_decimal / 100)
+                longitude_minutes = float((longitude_decimal % 100) / 60)
+                longitude = longitude_degrees + longitude_minutes
 
-#             longitude_degrees = int(longitude_decimal // 100)
-#             longitude_minutes = (longitude_decimal % 100) / 60
-#             longitude = longitude_degrees + longitude_minutes
+                # Cập nhật giá trị lên các ô label
+                longitude_display['text'] = f"{longitude:.8f}"  # Hiển thị đến 6 chữ số thập phân
+                latitude_display['text'] = f"{latitude:.8f}"  # Hiển thị đến 6 chữ số thập phân
 
-#             # Cập nhật giá trị lên các ô label
-#             longitude_display['text'] = f"{longitude:.6f}"  # Hiển thị đến 6 chữ số thập phân
-#             latitude_display['text'] = f"{latitude:.6f}"  # Hiển thị đến 6 chữ số thập phân
-  
+    except:
+        # Xử lý khi UART bị ngắt
+        longitude_display['text'] = "0.0"
+        latitude_display['text'] = "0.0"
+
+ultra_values = []
+new_values = []
 # Hàm nhấn nút show value
 def show():
+    global ultra_values,new_values
     show_angle()
     show_dis()
     show_vel()
+    show_gps()
+    ultrasonic = ultra_uart.readline().decode().strip()
+    if ultrasonic.startswith('U'):
+        ultra_data = ultrasonic[1:].replace('\x00','').split(',')
+        if len(ultra_data) == 4:
+            new_values = [float(value) for value in ultra_data]
+            if new_values != ultra_values:
+                ultra_values = new_values
+    print("Updated ultra_values:", ultra_values)
     root.after(100, show)    
 
 # phân luồng cho nút show 
@@ -382,7 +399,7 @@ longitude_label= tk.Label(root,text='Longitude',bg = GUI_color)
 longitude_label.place(x=1050,y=5)
 
 # Tạo ô hiển thị Longitude
-longitude_display = tk.Label(root,relief=tk.SUNKEN,padx=5,bg='white')
+longitude_display = tk.Label(root,relief=tk.SUNKEN,padx=5,bg='white',anchor=tk.W)
 longitude_display.place(x=1050,y=30,height=30,width=280)
 
 # Tạo nhãn hiển thị Latitude
@@ -390,7 +407,7 @@ latitude_label = tk.Label(root,text='Latitude',bg=GUI_color)
 latitude_label.place(x=1050,y=65)
 
 # Tạo ô hiển thị Latitude
-latitude_display = tk.Label(root,relief=tk.SUNKEN,bg='white')
+latitude_display = tk.Label(root,relief=tk.SUNKEN,bg='white',anchor=tk.W,padx=5)
 latitude_display.place(x=1050,y=90,height=30,width=280)
 
 # Lấy danh sách tất cả các cổng COM 
@@ -684,82 +701,100 @@ def calculate_total_angle(arr):
     return angle_array,desired_array
 '''-----ooo-----'''
 
-'''điều xung theo góc cho bánh trước'''
-MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
-STRAIGHT_pulse = 10000 # bánh đánh thẳng
-MIN_right_pulse = 0 # bánh đánh hết sang phải
-Max_steering = 38 # góc quay tối đa qua một bên
+# '''điều xung theo góc cho bánh trước'''
+# MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
+# STRAIGHT_pulse = 10000 # bánh đánh thẳng
+# MIN_right_pulse = 0 # bánh đánh hết sang phải
+# Max_steering = 38 # góc quay tối đa qua một bên
 
-def adjust_front_pulse(desired,actual,change):
-    sub = desired - actual
-    pulse= pulse_straight = 10000
-    pulse_desired = int((change/38)*10000)+10000
+# def adjust_front_pulse(desired,actual,change):
+#     sub = desired - actual
+#     pulse= pulse_straight = 10000
+#     pulse_desired = int((change/38)*10000)+10000
 
-    if pulse_desired>MAX_left_pulse:
-        pulse_desired = MAX_left_pulse
-    elif pulse_desired<0:
-        pulse_desired = MIN_right_pulse
+#     if pulse_desired>MAX_left_pulse:
+#         pulse_desired = MAX_left_pulse
+#     elif pulse_desired<0:
+#         pulse_desired = MIN_right_pulse
 
-    # điều xung cho quay bên trái
-    if sub>= 0 and sub <= abs(change)/2:
-        if sub> 2:
-            pulse  = int((sub/38)*10000)+10000
-            return pulse
-        else:
-            pulse = pulse_straight
-            return pulse
-    elif sub > 2 and sub> abs(change)/2:
-        pulse = pulse_desired
+#     #Hệ số trả góc
+#     coef = 0.5
+#     # điều xung cho quay bên trái
+#     if sub>= 0 and sub <= abs(change)*coef:
+#         if sub> 1:
+#             pulse  = int((sub/38)*10000)+10000
+#             return pulse
+#         else:
+#             pulse = pulse_straight
+#             return pulse
+#     elif sub > 2 and sub> abs(change)*coef:
+#         pulse = pulse_desired
+#         return pulse
+
+#     # điều xung cho quay bên phải
+#     if sub>= -abs(change)*coef and sub <= 0:
+#         if sub<-1:
+#             pulse  = int((sub/38)*10000)+10000
+#             return pulse
+#         else:
+#             pulse = pulse_straight
+#             return pulse
+#     elif sub<-2 and sub<-abs(change)*coef:
+#         pulse = pulse_desired
+#         return pulse
+
+#     return pulse
+# '''----oooo----'''
+
+# '''điều tốc độ quay motor bánh trước'''
+# MAX_steering_speed = 50
+# Min_steering_speed = 35
+
+# def adjust_front_speed(desired,actual):
+#     sub = abs(desired-actual)
+#     # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
+#     if sub>10:
+#         speed = MAX_steering_speed
+#     elif sub>=0 and sub<=10:
+#         speed = Min_steering_speed
+#     return speed
+# '''------oooo-----'''
+
+def map(inValue,  inMax,  inMin, outMax,  outMin ):
+
+	if inValue > inMax: 
+	
+		return outMax
+	
+	elif inValue < inMin:
+
+		return outMin
+
+	else:
+
+		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin
+
+last_d_term_f = 0
+def PID_control_front_wheel(angle_desire, angle_actual,sample_time):
+    global last_d_term_f 
+    P_gain =  3.0
+    D_gain = 0.1
+    alpha = 0.1
+
+    error = angle_desire - angle_actual
+    d_term = error/sample_time
+    d_term_f = alpha*d_term + (1-alpha)*last_d_term_f
+    last_d_term_f = d_term_f
+    output = int(P_gain*error + D_gain*d_term_f)
+
+    if output == 0:
+        return 10000
+    elif output > 0:
+        pulse = int(map(output, 100, 0, 19900, 10000))
         return pulse
-
-    # điều xung cho quay bên phải
-    if sub>= -abs(change)/2 and sub <= 0:
-        if sub<-2:
-            pulse  = int((sub/38)*10000)+10000
-            return pulse
-        else:
-            pulse = pulse_straight
-            return pulse
-    elif sub<-2 and sub<-abs(change)/2:
-        pulse = pulse_desired
+    elif output < 0:
+        pulse = int(map(output, 0, -100, 10000, 100))
         return pulse
-
-    return pulse
-'''----oooo----'''
-
-'''điều tốc độ quay motor bánh trước'''
-MAX_steering_speed = 75
-MID_steering_speed = 50
-Min_steering_speed = 30
-
-def adjust_front_speed(desired,actual):
-    sub = abs(desired-actual)
-    # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
-    if sub>38:
-        speed = MAX_steering_speed
-    elif sub>10 and sub<=38:
-        speed = MID_steering_speed
-    elif sub>=0 and sub<=10:
-        speed = Min_steering_speed
-    return speed
-'''------oooo-----'''
-
-# Ghi dữ liệu vào file Excel với tên có số thứ tự
-def save_to_excel(data_list, counter):
-    data = {
-        'Desired Angle': [],
-        'Actual Angle': [],
-        'Desired Distance': [],
-        'Actual Distance':[]
-    }
-    for item in data_list:
-        data['a'].append(item['a'])
-        data['b'].append(item['b'])
-        data['c'].append(item['c'])
-        data['c'].append(item['c'])
-    df = pd.DataFrame(data)
-    filename = f'du_lieu_{counter}.xlsx'
-    df.to_excel(filename, index=False)
 
 # cờ chạy
 run = False
@@ -769,10 +804,9 @@ actual_dis_p = 0 # lưu giá trị thực tế sau khi kết thúc
 back_speed = 0 # giá trị tốc độ của bánh sau
 displaced_angle = 0 # giá trị góc mong muốn
 desired_angle = 0 # góc mong muốn của xe
-
 def car_auto_control():
     global achieved_length,actual_dis_p,init
-    global run,points,back_speed
+    global run,points,back_speed,counter
     global displaced_angle,desired_angle
 
     if run:
@@ -787,29 +821,6 @@ def car_auto_control():
         direction = b'T'
 
         if actual_dis<total_length:
-        #     displacement_0 = 0 # độ dời
-        #     # cho góc mong muốn
-        #     for i in range(len(length_list)):
-        #         for j in range (len(desired_angle_list)):
-        #             displacement_0 += length_list[i] # độ dời quãng đường
-        #             if (actual_dis >= actual_dis_p) and (actual_dis< actual_dis_p + length_list[0]):
-        #                 desired_angle = desired_angle_list[0] #góc mong muốn
-        #             elif actual_dis >= (actual_dis_p + displacement_0):
-        #                 if j+1<len(desired_angle_list):
-        #                     desired_angle = desired_angle_list[j+1] #góc mong muốn
-        #                     print('j_0',j)
-        #             print('displacement_0',displacement_0)
-
-        #     displacement_1 = 0 # độ dời
-        #     #cho độ dời góc
-        #     for i in range(len(length_list)):
-        #         for j in range (len(change_angle_list)):
-        #             displacement_1 += length_list[i] # độ dời quãng đường
-        #             if (actual_dis >= actual_dis_p) and (actual_dis< actual_dis_p + length_list[0]):
-        #                 displaced_angle = change_angle_list[0] # độ dời góc
-        #             elif actual_dis >= (actual_dis_p + displacement_1):
-        #                 if (j+1)<len(change_angle_list):
-        #                     displaced_angle = change_angle_list[j+1] # độ dời góc     
             step = 0
             for i in range(len(length_list)):
                 if actual_dis< actual_dis_p + length_list[i]:
@@ -819,15 +830,15 @@ def car_auto_control():
             displaced_angle = change_angle_list[step]
             
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
-                back_speed = 50
+                back_speed = 50 # chạy tốc 50 với 2m đầu
             elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-1):
                 if (actual_angle-desired_angle>=-1) and (actual_angle-desired_angle<=1):
                     back_speed = 30 # xe đi thẳng chạy tốc 30
                 else:
-                    back_speed = 35 # xe rẽ chạy tốc 50
+                    back_speed = 35 # xe rẽ chạy tốc 35
             else: 
                 back_speed = 0
-            
+
         else:
             achieved_length = total_length # lưu lại tổng độ dài quãng đường đi được
             actual_dis_p = actual_dis # lưu lại quãng đường thực tế
@@ -837,14 +848,14 @@ def car_auto_control():
 
         print('dis', actual_dis)
         print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
-
+        print('ultra:',ultra_values)
         # UART cho bánh trước
-        front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
-        front_speed = chr(adjust_front_speed(desired_angle,actual_angle))
+        # front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
+        # front_speed = chr(adjust_front_speed(desired_angle,actual_angle))
+        front_pulse =str(int(PID_control_front_wheel(desired_angle,actual_angle,0.15)))
+        front_speed = chr(100)
         f_uart_data = f_start_bit + front_speed.encode('utf-8') + front_pulse.encode('utf-8') + stop_bit
         f_uart.write(f_uart_data)
-
-        #UART cho bánh sau
         b_speed_str = str(back_speed)
         b_uart_data = b_start_bit + direction + b_speed_str.encode('utf-8') + stop_bit
         b_uart.write(b_uart_data)
@@ -856,6 +867,9 @@ def car_auto_control():
 def go_click():
     global run 
     run = True
+    brake_adc_emer = b'S'
+    brake_emer = p_start_bit + brake_adc_emer + stop_bit
+    emer_uart.write(brake_emer)
     threading.Thread(target=car_auto_control).start() 
 
 # Tạo nút Go
@@ -866,12 +880,16 @@ objects_4.append(go_btn)
 lines = []
 # Hàm khi ấn nút Emergency Button 
 def em_click():
+    global run
 
-    brake_adc_emer = b'100'
+    run = False
+    brake_adc_emer = b'E'
     brake_emer = p_start_bit + brake_adc_emer + stop_bit
     lines.append(brake_emer)
 
-    back_emer = b_start_bit + back_adc + stop_bit
+    back_speed = str(0)
+    direction = b'T'
+    back_emer = b_start_bit + direction + back_speed.encode('utf-8') + stop_bit
     lines.append(back_emer)
 
     for line in lines:
@@ -1117,71 +1135,89 @@ objects_1.append(brake_slide)
 fig = Figure()
 
 # Vẽ theo góc quay xe
-ax1 = fig.add_subplot(2, 1, 1)
+ax1 = fig.add_subplot(1, 1, 1)
 ax1.set_title('Car Trajectory')
-ax1.set_xlabel('Time')
-ax1.set_ylabel('Angle')
-ax1.grid(True)
-ax1.set_xlim(0, 100)
-ax1.set_ylim(-190, 190)       
+ax1.set_xlabel('Latitude')
+ax1.set_ylabel('Longitude')
+ax1.grid(True)      
+ax1.set_aspect('equal')
 line1, = ax1.plot([], [], 'g')
-
-# Vẽ theo kinh độ và vĩ độ
-ax2 = fig.add_subplot(2,1,2)
-ax2.set_title('Car Position')
-ax2.set_xlabel('Longitude')
-ax2.set_ylabel('Lattitude')
-ax2.grid(True)
-line2, = ax2.plot([], [], 'r')
-
 
 # Khởi tạo canvas để hiển thị đồ thị
 canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.get_tk_widget().place(x=560, y=170, height=590, width=770)
+canvas.get_tk_widget().place(x=590, y=170, height=590, width=900)
 
 # Điều chỉnh vị trí của đồ thị
 fig.tight_layout()
 
 # Mảng lưu các giá trị angles, distances
-angles = []
-distances = []
+longitudes = []
+latitudes = []
 
 # Biến cờ cho đồ thị
 run = False
 
-# Hàm cập nhật dữ liệu nối tiếp và vẽ đồ thị
 def update_plot():
     global run
- 
-    if run==True:
-        # Đọc UART 
-        data = ang_uart.readline().decode().strip()
-        # Kiểm tra biến đầu và trích xuất giá trị
-        if data.startswith('Y'):
-            angle_value = float(data[1:])
+    global longitudes, latitudes
 
-        # Kiểm tra nếu danh sách angles có quá nhiều giá trị, chỉ giữ lại 100 giá trị gần nhất
-            if len(angles) < 100:
-                # Thêm giá trị mới vào danh sách
-                angles.append(angle_value)
-            else:
-                angles.pop(0)  # Xóa phần tử đầu tiên
-                angles.append(angle_value)  # Thêm giá trị mới vào cuối danh sách
-        
+    if run:
+        try:
+            # Đọc dữ liệu UART về GPS
+            gps = gps_uart.readline().decode().strip()
+
+            # Xử lý tín hiệu UART cho GPS
+            if gps.startswith('$GPRMC'):
+                data = gps.split(',')
+                if data[2] == 'A':
+                    latitude_decimal = float(data[3])
+                    longitude_decimal = float(data[5])
+
+                    # Chuyển đổi độ phút giây
+                    latitude_degrees = int(latitude_decimal // 100)
+                    latitude_minutes = (latitude_decimal % 100) / 60
+                    latitude = latitude_degrees + latitude_minutes
+
+                    longitude_degrees = int(longitude_decimal // 100)
+                    longitude_minutes = (longitude_decimal % 100) / 60
+                    longitude = longitude_degrees + longitude_minutes
+
+                    # Cập nhật danh sách latitudes và longitudes
+                    if len(latitudes) >= 100:
+                        latitudes.pop(0)  # Xóa phần tử đầu tiên
+                        longitudes.pop(0)  # Xóa phần tử đầu tiên
+
+                    latitudes.append(latitude)  # Thêm giá trị mới vào cuối danh sách
+                    longitudes.append(longitude)  # Thêm giá trị mới vào cuối danh sách
+
+        except Exception as e:
+            print("Error:", str(e))
+            longitude = 0.0
+            latitude = 0.0
+
+            # Cập nhật danh sách latitudes và longitudes
+            if len(latitudes) >= 100:
+                latitudes.pop(0)  # Xóa phần tử đầu tiên
+                longitudes.pop(0)  # Xóa phần tử đầu tiên
+
+            latitudes.append(latitude)  # Thêm giá trị mới vào cuối danh sách
+            longitudes.append(longitude)  # Thêm giá trị mới vào cuối danh sách
+
         # Xóa dữ liệu cũ trên đồ thị
         ax1.clear()
-        
-        # Vẽ đồ thị 1
-        ax1.plot(range(len(angles)), angles, 'g')
+
+        # Vẽ đồ thị
+        ax1.scatter(latitudes, longitudes, color='g')
         ax1.set_title('Car Trajectory')
-        ax1.set_xlabel('Distance')
-        ax1.set_ylabel('Angle')
+        ax1.set_xlabel('Latitude')
+        ax1.set_ylabel('Longitude')
         ax1.grid(True)
-        ax1.set_xlim(0, 100)
-        ax1.set_ylim(-190, 190)
-        
+
+        # Đảm bảo tỷ lệ giữa trục x và trục y
+        ax1.set_aspect('equal')
+
         # Cập nhật đồ thị
-        canvas.draw() 
+        canvas.draw()
    
 def start():
     global run
@@ -1189,7 +1225,7 @@ def start():
     update_plot()
 
     # Gọi lại hàm start mỗi 150ms
-    root.after(150, start)
+    root.after(50, start)
 
 # Hàm nút Start
 def start_click():

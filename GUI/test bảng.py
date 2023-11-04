@@ -64,7 +64,7 @@ b= [0,-45,90] # change angle
 c = [0,-45,45] # deisred angle
 
 d= 0 # actual_p
-e = 7 # actual
+e = 2 # actual
 
 f = 0 # desired_p
 g = 25.6 # desired
@@ -74,59 +74,59 @@ speed = 0 # speed
 
 desired_ang = 0
 change_ang = 0
-act_ang = 0
+act_ang = -0.3
 
 
 '''điều xung theo góc cho bánh trước'''
 MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
 STRAIGHT_pulse = 10000 # bánh đánh thẳng
 MIN_right_pulse = 0 # bánh đánh hết sang phải
+Max_steering = 38 # góc quay tối đa qua một bên
 
 def adjust_front_pulse(desired,actual,change):
     sub = desired - actual
+    pulse= pulse_straight = 10000
+    pulse_desired = int((change/38)*10000)+10000
 
+    if pulse_desired>MAX_left_pulse:
+        pulse_desired = MAX_left_pulse
+    elif pulse_desired<0:
+        pulse_desired = MIN_right_pulse
+
+    #Hệ số trả góc
+    coef = 0.5
     # điều xung cho quay bên trái
-    if sub>=0 and sub <= abs(change)/2:
-        pulse = STRAIGHT_pulse
-    elif sub > abs(change)/2 and sub>2 :
-        pulse = MAX_left_pulse
-    
+    if sub>= 0 and sub <= abs(change)*coef:
+        if sub> 1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub > 1 and sub> abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
+
     # điều xung cho quay bên phải
-    if sub>=-abs(change/2) and sub <=0:
-        pulse = STRAIGHT_pulse
-    elif sub <-abs(change)/2 and sub <-2:
-        pulse = MIN_right_pulse
-   
+    if sub>= -abs(change)*coef and sub <= 0:
+        if sub<-1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub<-1 and sub<-abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
+
     return pulse
 '''----oooo----'''
 
 
 if e<g:
-    # p_0 = 0
-    # for i in range(len(a)):
-    #     for j in range(len(b)):
-    #         p_0+=a[i]
-    #         if e>= d and e<d+a[0]:
-    #             change_ang = b[0]
-    #             break
-    #         elif e>=d+p_0:
-    #             if j+1<len(b):
-    #                 change_ang = b[j+1]
-    #             break
-    # p_1=0
-    # for i in range(len(a)):
-    #     for j in range(len(c)):
-    #         p_1+=a[i]
-    #         if e>= d and e<d+a[0]:
-    #             desired_ang = c[0]
-    #             break
-    #         elif e>=d+p_1:
-    #             if j+1<len(c):
-    #                 desired_ang = c[j+1]
-    #             break
     step= 0
     for i in range(len(a)):
-        if e< a[i]:
+        if e<a[i]:
             step = i
             break
     desired_ang = c[step]
