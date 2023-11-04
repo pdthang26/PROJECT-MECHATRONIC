@@ -20,7 +20,7 @@ def map(inValue,  inMax,  inMin, outMax,  outMin ):
 last_d_term_f = 0
 def PID_control_front_wheel(angle_desire, angle_actual,sample_time):
     global last_d_term_f 
-    P_gain =  2
+    P_gain =  1
     D_gain = 0.08
     alpha = 0.1
     error = angle_desire - angle_actual
