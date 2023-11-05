@@ -23,26 +23,27 @@ def PID_control_front_wheel(angle_desire, angle_actual,sample_time):
     P_gain =  1
     D_gain = 0.08
     alpha = 0.1
+
     error = angle_desire - angle_actual
     d_term = error/sample_time
     d_term_f = alpha*d_term + (1-alpha)*last_d_term_f
     last_d_term_f = d_term_f
-    output = P_gain*error + D_gain*d_term_f
+    output = int(P_gain*error + D_gain*d_term_f)
+
     if output == 0:
         return 10000
     elif output > 0:
-        pulse = map(output, 100, 0, 20000, 10000)
+        pulse = int(map(output, 100, 0, 20000, 10000))
         return pulse
     elif output < 0:
-        pulse = map(output, 0, -100, 10000, 0)
+        pulse = int(map(output, 0, -100, 10000, 0))
         return pulse
-
 
 while(True):
       angle_ac = float(input('nhap goc that: '))
       angle_d = float(input('nhap goc yeu cau: '))
       print(last_d_term_f)
-      print(PID_control_front_wheel(angle_d,angle_ac,0.15))
+      print(int(PID_control_front_wheel(angle_d,angle_ac,0.15)))
 
       
 

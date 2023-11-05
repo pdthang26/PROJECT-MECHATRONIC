@@ -59,71 +59,86 @@
 
 # move_car(points, angles)
 
-a = [7,7,7]
-b= [0,-45,90]
-
+a = [10,15.6,25.6] # length increment
+b= [0,-45,90] # change angle
+c = [0,-45,45] # deisred angle
 
 d= 0 # actual_p
-e = 7 # actual
+e = 2 # actual
 
 f = 0 # desired_p
-g = 21 # desired
-h= g+f #total_length
+g = 25.6 # desired
+h= g+f # total_length
 
 speed = 0 # speed
 
-angle = 0 
-act_ang = 0
-act_ang_p =0
+desired_ang = 0
+change_ang = 0
+act_ang = -0.3
+
 
 '''điều xung theo góc cho bánh trước'''
 MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
 STRAIGHT_pulse = 10000 # bánh đánh thẳng
 MIN_right_pulse = 0 # bánh đánh hết sang phải
+Max_steering = 38 # góc quay tối đa qua một bên
 
 def adjust_front_pulse(desired,actual,change):
     sub = desired - actual
+    pulse= pulse_straight = 10000
+    pulse_desired = int((change/38)*10000)+10000
 
+    if pulse_desired>MAX_left_pulse:
+        pulse_desired = MAX_left_pulse
+    elif pulse_desired<0:
+        pulse_desired = MIN_right_pulse
+
+    #Hệ số trả góc
+    coef = 0.5
     # điều xung cho quay bên trái
-    if sub>=0 and sub <= abs(change)/2:
-        pulse = STRAIGHT_pulse
-    elif sub > abs(change)/2 and sub>2 :
-        pulse = MAX_left_pulse
-    
+    if sub>= 0 and sub <= abs(change)*coef:
+        if sub> 1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub > 1 and sub> abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
+
     # điều xung cho quay bên phải
-    if sub>=-abs(change/2) and sub <=0:
-        pulse = STRAIGHT_pulse
-    elif sub <-abs(change)/2 and sub <-2:
-        pulse = MIN_right_pulse
-   
+    if sub>= -abs(change)*coef and sub <= 0:
+        if sub<-1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub<-1 and sub<-abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
+
     return pulse
 '''----oooo----'''
 
 
 if e<g:
-    c= 0 # displacement
+    step= 0
     for i in range(len(a)):
-        for j in range(len(b)):   
-            c += a[i]
-            if e >= d and e<d+a[0]:
-                if e==d:
-                    act_ang_p = act_ang
-                angle = b[0]
-            elif e>=d+c:
-                if j+1<len(b):
-                    if e == d+c:
-                        act_ang_p = act_ang
-                    angle = b[j+1]
-
-    desired = act_ang_p + angle
-    print ("góc quay mỗi điểm:",angle)
-    print ('góc của xe tại các điểm:',act_ang_p)
-    print ('góc mong muốn:',desired)
+        if e<a[i]:
+            step = i
+            break
+    desired_ang = c[step]
+    change_ang = b[step]
+               
+    print ("góc quay mỗi điểm:",change_ang)
+    print ('góc mong muốn:',desired_ang)
 
     if e>=d and e<=d+2:
         speed = 75
     if e> d+2 and e<=h-1:
-        if act_ang-desired>=-1 and act_ang-desired<=1:
+        if act_ang-desired_ang>=-1 and act_ang-desired_ang<=1:
             speed = 30
         else:
             speed = 50
@@ -138,5 +153,46 @@ else:
     print('tổng trước:',f)
     print('thực tế trước:',d)
 
-pwm = adjust_front_pulse(desired,act_ang,angle)
+pwm = adjust_front_pulse(desired_ang,act_ang,change_ang)
 print('xung bánh trước:',pwm)
+
+# '''điều xung theo góc cho bánh trước'''
+# MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
+# STRAIGHT_pulse = 10000 # bánh đánh thẳng
+# MIN_right_pulse = 0 # bánh đánh hết sang phải
+
+# def adjust_front_pulse(desired,actual,change):
+#     sub = desired - actual
+#     pulse_straight = 10000
+#     pulse_desired = int((change/38)*10000)+10000
+
+#     if pulse_desired>MAX_left_pulse:
+#         pulse_desired = MAX_left_pulse
+#     elif pulse_desired<0:
+#         pulse_desired = MIN_right_pulse
+
+#     # điều xung cho quay bên trái
+#     if sub>= 0 and sub <= change/2:
+#         pulse = pulse_straight
+#         return pulse
+#     elif sub > 2 and sub>change/2:
+#         pulse = pulse_desired
+#         return pulse
+
+#     # điều xung cho quay bên phải
+#     if sub>= abs() and sub <= 0:
+#         pulse = pulse_straight
+#         return pulse
+#     elif sub<-2:
+#         pulse = MIN_right_pulse
+#         return pulse
+
+#     return pulse
+
+# a = 20 #change
+# b = -20 #desired
+# c = 0 #actual
+
+# pulse = int(adjust_front_pulse(b,c,a))
+
+# print(f'xung cần quay góc {a} là {pulse}')

@@ -44,17 +44,21 @@ def plot_lines_and_angle(a1, a2, a3, ax):
 def calculate_total_length(arr):
     total_length = 0
     length_list=[]
+    length_incremental = []
     for i in range(len(arr) - 1):
         a1 = np.array(arr[i])
         a2 = np.array(arr[i+1])
         direction_A = a2 - a1
         length = np.linalg.norm(direction_A)
         total_length += length
+        length_incremental.append(total_length) 
         length_list.append(length)
-    return total_length,length_list
+    return total_length,length_list,length_incremental
 
 def calculate_total_angle(arr):
     angle_array = []
+    angle = 0
+    desired = []
     
     a1 = np.array(arr[0])
     a2 = np.array(arr[1])
@@ -93,31 +97,39 @@ def calculate_total_angle(arr):
             angle_array.append(angle_deg) 
         else:
             angle_array.append(-angle_deg) 
+
+    for j in range(len(angle_array)):
+        angle += angle_array[j]
+        desired.append(angle)
         
-    return angle_array
+    return angle_array,desired
 
 
     
 # Ví dụ sử dụng:
 a0 = (0, 0)
-a1 = (0, 7)
-a2 = (7, 7)
-# a3 = (-2,20)
-# a4 = (-2,25)
+a1 = (0, 10)
+a2 = (5.6, 15.6)
+a3 = (5.6,25.6)
+a4 = (0,25.6)
+a5 = (0,0)
 
 
-arr = [a0,a1,a2]
+arr = [a0,a1,a2,a3,a4,a5]
 
 fig, ax = plt.subplots()
 
-a,b = calculate_total_length(arr)
+a,b,e = calculate_total_length(arr)
+c,d = calculate_total_angle(arr)
 
 for i in range(len(arr) - 2):
     plot_lines_and_angle(arr[i], arr[i+1], arr[i+2], ax)
 print(arr)
 print(f'Total length: {a:.2f}')
 print(f'array of length: {b}')
-print(f'array of angle: {calculate_total_angle(arr)}')
+print(f'array of change angle:{c} ')
+print(f'array of dersired angle:{d}')
+print(f'incremental length:{e}')
 
 
 # Đặt tiêu đề và chú thích cho biểu đồ
