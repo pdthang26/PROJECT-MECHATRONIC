@@ -36,6 +36,8 @@
 #define BACK   							0x012
 #define FRONT   						0x274
 #define BRAKE								0x222
+#define ULTRASONIC_ID       0x112
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,6 +66,7 @@ uint8_t dataBuff[9];
 char data_y[20];
 char data_v[20];
 char data_d[20];
+char data_us[21];
 
 typedef struct 
 {
@@ -85,15 +88,15 @@ dataCAN dataCANvel = {.type = 'V'};
 dataCAN dataCANpos = {.type = 'P'};
 dataCAN dataCANyaw = {.type = 'Y'};
 
+typedef struct  
+{
+	char type;
+	uint16_t outside;
+	uint16_t center;
+}ultraSonicDataCAN;
 
-//char kinhdo[16];
-//char vido[16];
-
-//GPS_t GPS_NEO;
-
-//GPS_Name GPS1;
-//CLCD_I2C_Name LCD1;
-
+ultraSonicDataCAN ultraSonicLeft = {.type = 'L'};
+ultraSonicDataCAN ultraSonicRight = {.type = 'R'};
 
 // CAN protocol variable
 CAN_HandleTypeDef     CanHandle;
@@ -173,13 +176,13 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 
-//	CLCD_I2C_Init(&LCD1,&hi2c1,0x4e,16,2);
+
 	
 	
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_UART_Receive_IT(&huart3, &buffer, 1);
 	
-//	GPS_Init(&GPS1,&huart1);
+
 	
   /* USER CODE END 2 */
 
@@ -191,15 +194,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		
-		
-//		sprintf(kinhdo,"%c:%d:%.1f  ",dataInBackWheel.Dir, dataInBackWheel.val, dataCANpos.value);
-//		CLCD_I2C_SetCursor(&LCD1, 0,0);
-//		CLCD_I2C_WriteString(&LCD1,kinhdo);
-//		
-//		sprintf(vido,"%d:%.1f:%.1f  ", dataInFrontWheel.val, dataCANyaw.value, dataCANvel.value);
-//		CLCD_I2C_SetCursor(&LCD1, 0,1);
-//		CLCD_I2C_WriteString(&LCD1,vido);
 	
 	}
   /* USER CODE END 3 */
@@ -390,6 +384,10 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -397,16 +395,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA0 PA1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pins : PA0 PA1 PA2 PA3
+                           PA4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
@@ -445,18 +440,33 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 			if(RxData[3]== dataCANvel.type)
 			{
 				dataCANvel.value = convert8ByteToFloat(RxData,4,7);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
 			}
 			
 			else if(RxData[3]== dataCANpos.type) 
 			{
 				dataCANpos.value = convert8ByteToFloat(RxData,4,7);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 			}
 			
 			else if(RxData[3]== dataCANyaw.type) 
 			{
 				dataCANyaw.value = convert8ByteToFloat(RxData,4,7);
-				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
 			}
+			else if(RxData[3]== ultraSonicLeft.type)
+			{
+				ultraSonicLeft.outside = convert8byteToUint16_t(RxData,6,7);
+				ultraSonicLeft.center = convert8byteToUint16_t(RxData,4,5);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
+			}
+			else if(RxData[3]== ultraSonicRight.type)
+			{
+				ultraSonicRight.outside = convert8byteToUint16_t(RxData,6,7);
+				ultraSonicRight.center = convert8byteToUint16_t(RxData,4,5);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
+			}
+			
 		}
 	}
 }
@@ -464,19 +474,25 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim -> Instance == TIM3){
+		
 		sprintf(data_y,"\nY%.1f",dataCANyaw.value);
 		HAL_UART_Transmit(&huart3,(uint8_t*)data_y,sizeof(data_y),HAL_MAX_DELAY);	
+		
 		sprintf(data_d,"\nD%.1f",dataCANpos.value);
 		HAL_UART_Transmit(&huart3,(uint8_t*)data_d,sizeof(data_d),HAL_MAX_DELAY);
+		
 		sprintf(data_v,"\nV%.1f",dataCANvel.value);
 		HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
+		
+		sprintf(data_us,"\nU%d,%d,%d,%d",ultraSonicLeft.outside,ultraSonicLeft.center,ultraSonicRight.center,ultraSonicRight.outside);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data_us,sizeof(data_us),HAL_MAX_DELAY);
 	}
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	
-//	if(huart->Instance == USART1) GPS_UART_CallBack(&GPS1,&GPS_NEO);
+
 	if(huart->Instance == USART3) 
 	{
 		if (buffer != 10)

@@ -1,6 +1,7 @@
 --cpu Cortex-M3
 "ultrasonicsensor\startup_stm32f103xb.o"
 "ultrasonicsensor\sr04.o"
+"ultrasonicsensor\convert_lib.o"
 "ultrasonicsensor\main.o"
 "ultrasonicsensor\stm32f1xx_it.o"
 "ultrasonicsensor\stm32f1xx_hal_msp.o"

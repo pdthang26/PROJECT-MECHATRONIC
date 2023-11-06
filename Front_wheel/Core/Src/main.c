@@ -42,6 +42,7 @@
 #define MASTER_ID      			0x281
 #define SLAVE_ID1   				0x012
 #define SLAVE_ID2   				0x274
+#define alpha 0.2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -102,11 +103,11 @@ int count=-1;
 //float prev_error = 0.0;
 //float integral = 0.0;
 
-float Kp = 1.1;
+float Kp = 0.5 ,Kd = 0.08;
 float Ts = 0.01; // 10ms
 
-float input, output;
-
+float input, output, lastError;
+uint16_t test =10000;
 
 
 // Khai bao bien cho PWM
@@ -731,20 +732,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 // Traditional PID
-float pid_controller(float setpoint, float input) {
+float pid_controller(float setPoint, float current) {
 	
-    float error = setpoint - input; // Calculating error
-    
-    float output = Kp * error  ; // Tính giá tr? d?u ra c?a hàm di?u khi?n
+//    float error = setpoint - input; // Calculating error
+//    
+//    float output = Kp * error  ; // Tính giá tr? d?u ra c?a hàm di?u khi?n
 
-    // Luu tr? sai s? và tích phân
-    
-		if (output > 100)
-        output = 100;
-    else if (output < - 100)
-        output = -100;
-		
-    return output;
+//    // Luu tr? sai s? và tích phân
+//    
+//		if (output > 100)
+//        output = 100;
+//    else if (output < - 100)
+//        output = -100;
+//		
+//    return output;
+	int output;
+	float error = setPoint - current;
+	float d_term = Kd*(error-lastError)/Ts;
+	
+	static float d_term_f, last_d_term_f;
+	
+	d_term_f = alpha*d_term + (1-alpha)*last_d_term_f;
+	last_d_term_f = d_term_f;
+	
+	float PID = Kp*error + d_term_f;
+	
+	
+	if(PID > 100.0)	output =100;
+	else if(PID < -100.0) output = -100;
+	else output = PID;
+	lastError = error;
+	return output;
+	
+	
 }
 
 // dieu khien dong co dua tren pid
