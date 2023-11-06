@@ -29,7 +29,7 @@ void Init_SR04x(SR04_Name* SR04_x,TIM_HandleTypeDef *htim, TIM_TypeDef* TIMx, GP
 
 void readPulseDuration (SR04_Name* SR04_x);
 
-float readDistance (SR04_Name* SR04_x,uint32_t timeout);
+void readDistance (SR04_Name* SR04_x,uint32_t timeout);
 
 
 

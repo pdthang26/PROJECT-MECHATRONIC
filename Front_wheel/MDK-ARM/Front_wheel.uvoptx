@@ -203,37 +203,27 @@
         <Ww>
           <count>10</count>
           <WinNumber>1</WinNumber>
-          <ItemText>count,0x0A</ItemText>
+          <ItemText>RxDataAile,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>11</count>
           <WinNumber>1</WinNumber>
-          <ItemText>vel,0x0A</ItemText>
+          <ItemText>count,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>12</count>
           <WinNumber>1</WinNumber>
-          <ItemText>encoderGet</ItemText>
+          <ItemText>vel</ItemText>
         </Ww>
         <Ww>
           <count>13</count>
           <WinNumber>1</WinNumber>
-          <ItemText>mode</ItemText>
+          <ItemText>encoderGet</ItemText>
         </Ww>
         <Ww>
           <count>14</count>
           <WinNumber>1</WinNumber>
-          <ItemText>Kd</ItemText>
-        </Ww>
-        <Ww>
-          <count>15</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>test,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>16</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>\\Front_wheel\../Core/Src/main.c\Kd</ItemText>
+          <ItemText>mode</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

@@ -23,30 +23,6 @@ void convertUint32_tTo8byte(uint32_t value, uint8_t *arr, uint8_t startByte, uin
 	}
 }
 
-void convertUint16_tTo8byte(uint16_t value, uint8_t *arr, uint8_t startByte, uint8_t stopByte)
-{
-	uint8_t j = 1;
-	
-	for (int i = startByte; i <= stopByte; i++) 
-	{
-		arr[i] = (value >> (8 * j)) & 0xFF;
-		j--;
-	}
-}
-
-uint16_t convert8byteToUint16_t(uint8_t *arr, uint8_t startByte, uint8_t stopByte)
-{
-	uint16_t result = 0;
-	uint8_t j = 1;
-	for (int i = startByte; i <= stopByte; i++) 
-	{
-		result |= ((uint16_t)arr[i] << (8 * j));
-		j--;
-	}
-	return result;
-}
-
-
 void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte) {
     uint8_t j = stopByte - startByte;
     uint32_t num;
