@@ -701,64 +701,64 @@ def calculate_total_angle(arr):
     return angle_array,desired_array
 '''-----ooo-----'''
 
-# '''điều xung theo góc cho bánh trước'''
-# MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
-# STRAIGHT_pulse = 10000 # bánh đánh thẳng
-# MIN_right_pulse = 0 # bánh đánh hết sang phải
-# Max_steering = 38 # góc quay tối đa qua một bên
+'''điều xung theo góc cho bánh trước'''
+MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
+STRAIGHT_pulse = 10000 # bánh đánh thẳng
+MIN_right_pulse = 0 # bánh đánh hết sang phải
+Max_steering = 38 # góc quay tối đa qua một bên
 
-# def adjust_front_pulse(desired,actual,change):
-#     sub = desired - actual
-#     pulse= pulse_straight = 10000
-#     pulse_desired = int((change/38)*10000)+10000
+def adjust_front_pulse(desired,actual,change):
+    sub = desired - actual
+    pulse= pulse_straight = 10000
+    pulse_desired = int((change/38)*10000)+10000
 
-#     if pulse_desired>MAX_left_pulse:
-#         pulse_desired = MAX_left_pulse
-#     elif pulse_desired<0:
-#         pulse_desired = MIN_right_pulse
+    if pulse_desired>MAX_left_pulse:
+        pulse_desired = MAX_left_pulse
+    elif pulse_desired<0:
+        pulse_desired = MIN_right_pulse
 
-#     #Hệ số trả góc
-#     coef = 0.5
-#     # điều xung cho quay bên trái
-#     if sub>= 0 and sub <= abs(change)*coef:
-#         if sub> 1:
-#             pulse  = int((sub/38)*10000)+10000
-#             return pulse
-#         else:
-#             pulse = pulse_straight
-#             return pulse
-#     elif sub > 2 and sub> abs(change)*coef:
-#         pulse = pulse_desired
-#         return pulse
+    #Hệ số trả góc
+    coef = 0.5
+    # điều xung cho quay bên trái
+    if sub>= 0 and sub <= abs(change)*coef:
+        if sub> 1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub > 2 and sub> abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
 
-#     # điều xung cho quay bên phải
-#     if sub>= -abs(change)*coef and sub <= 0:
-#         if sub<-1:
-#             pulse  = int((sub/38)*10000)+10000
-#             return pulse
-#         else:
-#             pulse = pulse_straight
-#             return pulse
-#     elif sub<-2 and sub<-abs(change)*coef:
-#         pulse = pulse_desired
-#         return pulse
+    # điều xung cho quay bên phải
+    if sub>= -abs(change)*coef and sub <= 0:
+        if sub<-1:
+            pulse  = int((sub/38)*10000)+10000
+            return pulse
+        else:
+            pulse = pulse_straight
+            return pulse
+    elif sub<-2 and sub<-abs(change)*coef:
+        pulse = pulse_desired
+        return pulse
 
-#     return pulse
-# '''----oooo----'''
+    return pulse
+'''----oooo----'''
 
-# '''điều tốc độ quay motor bánh trước'''
-# MAX_steering_speed = 50
-# Min_steering_speed = 35
+'''điều tốc độ quay motor bánh trước'''
+MAX_steering_speed = 50
+Min_steering_speed = 35
 
-# def adjust_front_speed(desired,actual):
-#     sub = abs(desired-actual)
-#     # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
-#     if sub>10:
-#         speed = MAX_steering_speed
-#     elif sub>=0 and sub<=10:
-#         speed = Min_steering_speed
-#     return speed
-# '''------oooo-----'''
+def adjust_front_speed(desired,actual):
+    sub = abs(desired-actual)
+    # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
+    if sub>10:
+        speed = MAX_steering_speed
+    elif sub>=0 and sub<=10:
+        speed = Min_steering_speed
+    return speed
+'''------oooo-----'''
 
 def map(inValue,  inMax,  inMin, outMax,  outMin ):
 
@@ -850,10 +850,8 @@ def car_auto_control():
         print('angle', desired_angle,'    ', actual_angle,'   ',displaced_angle)
         print('ultra:',ultra_values)
         # UART cho bánh trước
-        # front_pulse = str(adjust_front_pulse(desired_angle,actual_angle,displaced_angle))
-        # front_speed = chr(adjust_front_speed(desired_angle,actual_angle))
         front_pulse =str(int(PID_control_front_wheel(desired_angle,actual_angle,0.15)))
-        front_speed = chr(100)
+        front_speed = chr(75)
         f_uart_data = f_start_bit + front_speed.encode('utf-8') + front_pulse.encode('utf-8') + stop_bit
         f_uart.write(f_uart_data)
         b_speed_str = str(back_speed)
