@@ -22,11 +22,15 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SR04.h"
+#include "convert_lib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 SR04_Name SR04_1;
+SR04_Name SR04_2;
+SR04_Name SR04_3;
+SR04_Name SR04_4;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -35,7 +39,7 @@ SR04_Name SR04_1;
 #define BACK_WHEEL_ID   		0x012
 #define FRONT_WHEEL_ID   		0x274
 #define BRAKE_ID      			0x222
-
+#define ULTRASONIC_ID       0x112
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,7 +54,7 @@ TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
 // CAN protocol variable
-
+CAN_HandleTypeDef     CanHandle;
 CAN_TxHeaderTypeDef   TxHeader;
 CAN_RxHeaderTypeDef   RxHeader;
 uint8_t               TxData[8];
@@ -110,6 +114,9 @@ int main(void)
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 	Init_SR04x(&SR04_1,&htim1,TIM1, GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1);
+	Init_SR04x(&SR04_2,&htim1,TIM1, GPIOA, GPIO_PIN_2, GPIOA, GPIO_PIN_3);
+	Init_SR04x(&SR04_3,&htim1,TIM1, GPIOA, GPIO_PIN_4, GPIOA, GPIO_PIN_5);
+	Init_SR04x(&SR04_4,&htim1,TIM1, GPIOA, GPIO_PIN_6, GPIOA, GPIO_PIN_7);
 	
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -127,8 +134,23 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		// doc 2 cam bien ben trai
+		uint16_t left = readDistance(&SR04_1, 5);// doc cam ben ngoai cung ben trai
+		uint16_t leftCenter = readDistance(&SR04_2, 5);// doc cam bien o giua ben trai
+		convertUint16_tTo8byte(left, TxData, 6, 7);
+		convertUint16_tTo8byte(leftCenter, TxData, 4, 5);
+		TxData[3] = 'L';
+		WriteCAN(MASTER_ID, TxData);//gui du lieu len Controller
 		
-		readDistance(&SR04_1, 100);
+		// doc 2 cam bien ben phai
+		uint16_t right = readDistance(&SR04_3, 5);//doc cam bien ngoai cung ben phai
+		uint16_t rightCenter = readDistance(&SR04_4, 5);// doc cam bien o giua ben phai
+		convertUint16_tTo8byte(right, TxData, 6, 7);
+		convertUint16_tTo8byte(rightCenter, TxData, 4, 5);
+		TxData[3] = 'R';
+		WriteCAN(MASTER_ID, TxData);//gui du lieu len Controller
+		
+		
 		
 		
     /* USER CODE END WHILE */
@@ -199,8 +221,8 @@ static void MX_CAN_Init(void)
   hcan.Init.Prescaler = 18;
   hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_2TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
@@ -297,7 +319,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_6, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -306,15 +328,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  /*Configure GPIO pins : PA0 PA2 PA4 PA6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pins : PA1 PA3 PA5 PA7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_5|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -341,6 +363,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData)== HAL_OK)
 	{
+		if(RxHeader.StdId==MASTER_ID)
+		{
+			HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
+		}
 	}
 	
 }
