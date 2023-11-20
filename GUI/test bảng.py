@@ -196,3 +196,63 @@ print('xung bánh trước:',pwm)
 # pulse = int(adjust_front_pulse(b,c,a))
 
 # print(f'xung cần quay góc {a} là {pulse}')
+
+
+# '''điều xung theo góc cho bánh trước'''
+# MAX_left_pulse = 20000 # bánh đánh hết sang bên trái
+# STRAIGHT_pulse = 10000 # bánh đánh thẳng
+# MIN_right_pulse = 0 # bánh đánh hết sang phải
+# Max_steering = 38 # góc quay tối đa qua một bên
+
+# def adjust_front_pulse(desired,actual,change):
+#     sub = desired - actual
+#     pulse= pulse_straight = 10000
+#     pulse_desired = int((change/38)*10000)+10000
+
+#     if pulse_desired>MAX_left_pulse:
+#         pulse_desired = MAX_left_pulse
+#     elif pulse_desired<0:
+#         pulse_desired = MIN_right_pulse
+
+#     #Hệ số trả góc
+#     coef = 0.5
+#     # điều xung cho quay bên trái
+#     if sub>= 0 and sub <= abs(change)*coef:
+#         if sub> 1:
+#             pulse  = int((sub/38)*10000)+10000
+#             return pulse
+#         else:
+#             pulse = pulse_straight
+#             return pulse
+#     elif sub > 2 and sub> abs(change)*coef:
+#         pulse = pulse_desired
+#         return pulse
+
+#     # điều xung cho quay bên phải
+#     if sub>= -abs(change)*coef and sub <= 0:
+#         if sub<-1:
+#             pulse  = int((sub/38)*10000)+10000
+#             return pulse
+#         else:
+#             pulse = pulse_straight
+#             return pulse
+#     elif sub<-2 and sub<-abs(change)*coef:
+#         pulse = pulse_desired
+#         return pulse
+
+#     return pulse
+# '''----oooo----'''
+
+# '''điều tốc độ quay motor bánh trước'''
+# MAX_steering_speed = 50
+# Min_steering_speed = 35
+
+# def adjust_front_speed(desired,actual):
+#     sub = abs(desired-actual)
+#     # khi góc quay tính ra lớn hơn góc tối đa mỗi bên 
+#     if sub>10:
+#         speed = MAX_steering_speed
+#     elif sub>=0 and sub<=10:
+#         speed = Min_steering_speed
+#     return speed
+# '''------oooo-----'''
