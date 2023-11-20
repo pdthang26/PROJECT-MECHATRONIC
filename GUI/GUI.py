@@ -201,34 +201,38 @@ def connect_uart():
 
 # hàm xử lý show angle
 def show_angle():
-    global angle
+    global actual_angle
     while(True):
         # Đọc dữ liệu UART về góc
         angle = ang_uart.readline().decode().strip()
         # Xử lý tín hiệu UART cho góc
         if angle.startswith('Y'):
-            angle_display['text'] = angle[1:].replace('\x00','')   
+            angle_display['text'] = angle[1:].replace('\x00','') 
+            actual_angle = float( angle[1:].replace('\x00',''))  
             break
 
 #Hàm xử lý show Velocity
 def show_vel():
+    global actual_vel
     while(True):
         # Đọc dữ liệu UART về tốc độ
         velocity = vel_uart.readline().decode().strip()
         # Xử lý tín hiệu UART cho tốc độ
         if velocity.startswith('V'):
-            vel_display['text'] = velocity[1:].replace('\x00','') 
+            vel_display['text'] = velocity[1:].replace('\x00','')
+            actual_vel = float(velocity[1:].replace('\x00',''))
             break
 
 # Hàm xử lý show Distance
 def show_dis():
-    global distance
+    global actual_dis
     while(True):
         # Đọc dữ liệu UART về quãng đường
         distance = dis_uart.readline().decode().strip()
         # Xử lý tín hiệu UART cho quãng đường
         if distance.startswith('D'):
             dis_display['text'] = distance[1:].replace('\x00','') 
+            actual_dis = float(distance[1:].replace('\x00',''))
             break
 
 # Hàm xử lý show GPS
@@ -991,7 +995,7 @@ def map(inValue,  inMax,  inMin, outMax,  outMin ):
 last_d_term_f = 0
 def PID_control_front_wheel(angle_desire, angle_actual,sample_time):
     global last_d_term_f 
-    P_gain =  3.0
+    P_gain =  2
     D_gain = 0.1
     alpha = 0.1
 
@@ -1035,8 +1039,8 @@ def car_auto_control():
         elif direction == b'L':
             change_angle_list,desired_angle_list = L_sketch_calculate_total_angle(arr_point)
 
-    actual_dis =  float(distance[1:].replace('\x00', ''))
-    actual_angle = float(angle[1:].replace('\x00', ''))
+    # actual_dis =  float(distance[1:].replace('\x00', ''))
+    # actual_angle = float(angle[1:].replace('\x00', ''))
 
     total_length = achieved_length + required_length
 
@@ -1044,7 +1048,7 @@ def car_auto_control():
         if abs(actual_dis)<total_length:
             step = 0
             for i in range(len(length_list)):
-                if actual_dis< actual_dis_p + length_list[i]:
+                if actual_dis< (actual_dis_p + length_list[i])-2.5:
                     step = i
                     break
             desired_angle = desired_angle_list[step]
@@ -1360,7 +1364,7 @@ ax1.set_title('Car Trajectory')
 ax1.set_xlabel('X')
 ax1.set_ylabel('Y')
 ax1.set_xlim(-10,10)
-ax1.set_ylim(-50,50)
+ax1.set_ylim(-25,50)
 ax1.grid(True)      
 line1, = ax1.plot([], [], 'g')
 
@@ -1404,32 +1408,13 @@ def update_plot():
     elif state==1:
         required_length, length_list = sketch_calculate_total_length(arr_point)
 
-    # đọc giá trị thực tế của quãng đường đi được
-    actual_dis =  float(distance[1:].replace('\x00', ''))
-    # đọc giá trị thực tế của góc xe
-    actual_angle = float(angle[1:].replace('\x00', ''))
+    # # đọc giá trị thực tế của quãng đường đi được
+    # actual_dis =  float(distance[1:].replace('\x00', ''))
+    # # đọc giá trị thực tế của góc xe
+    # actual_angle = float(angle[1:].replace('\x00', ''))
 
     if graph_run:
         
-        # for i in range(len(length_list)):
-        #     if (actual_dis > length_list[i]-0.2) and (actual_dis<length_list[i]+0.2):
-        #         x_0 = x_1
-        #         y_0 = y_1
-        #         a_p = actual_dis
-        #         break
-
-        # a_diff = actual_dis - a_p
-        # x_1 = x_0 - (a_diff * sin(radians(actual_angle))) 
-        # y_1 = y_0 + (a_diff * cos(radians(actual_angle))) 
-
-        # # làm tròn
-        # x_1 = round(x_1, 1)
-        # y_1 = round(y_1, 1)
-
-        # # gán là số thực 
-        # x = float(x_1)
-        # y = float(y_1)
-
         # Biến x, y 
         x_1,y_1 = calulation_next_point(x_0,y_0,actual_dis-a_p,actual_angle)
 
@@ -1450,7 +1435,7 @@ def update_plot():
         ax1.set_xlabel('X')
         ax1.set_ylabel('Y')
         ax1.set_xlim(-10,10)
-        ax1.set_ylim(-50,50)
+        ax1.set_ylim(-25,50)
         ax1.grid(True)
             
         # Cập nhật đồ thị
