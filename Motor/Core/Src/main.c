@@ -210,6 +210,8 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.TransmitGlobalTime = DISABLE;
 	
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,1);
 	
 	
 	

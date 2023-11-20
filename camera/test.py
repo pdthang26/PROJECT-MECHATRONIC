@@ -1,17 +1,11 @@
-import cv2
+import torch
 
-camera = cv2.VideoCapture(0)
+if torch.cuda.is_available():
+    device_id = 0  # Chọn GPU đầu tiên. Nếu bạn có nhiều GPU, bạn có thể chọn một GPU khác.
+    device = f"cuda:{device_id}"
+    print(f"GPU: {torch.cuda.get_device_name(device_id)}")
+else:
+    print("Không tìm thấy GPU. Hãy sử dụng CPU hoặc cài đặt driver CUDA.")
+    device = 'cpu'
 
-while True:
-    ret, frame = camera.read()
-
-    cv2.imshow("frame", frame)
-
-    key = cv2.waitKey(30)
-    if cv2.waitKey(30) & 0xFF == ord('q'):
-            break
-
-camera.release()
-cv2.destroyAllWindows()
-
-
+# model_seg = YOLO('YOLO_pretrain_models\yolov8n.pt', device=device)
