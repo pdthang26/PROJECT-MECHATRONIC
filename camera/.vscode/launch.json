@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/PROJECT-MECHATRONIC/Controller/Core/Src",
-      "program": "d:/PROJECT-MECHATRONIC/Controller/Core/Src/build/Debug/outDebug",
+      "cwd": "c:/actions-runner/_work/pytorch/pytorch/builder/windows/pytorch/aten/src/ATen/core",
+      "program": "c:/actions-runner/_work/pytorch/pytorch/builder/windows/pytorch/aten/src/ATen/core/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

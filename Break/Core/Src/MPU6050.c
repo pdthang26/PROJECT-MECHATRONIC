@@ -54,6 +54,7 @@ const double Accel_Z_corrector = 14418.0;
 uint16_t time = 0;
 uint16_t lastTime = 0;
 double dt;
+double pitch,roll;
 
 Kalman_t KalmanX = {
     .Q_angle = 0.001f,
@@ -200,7 +201,7 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
 		else{
 			dt = (double)(65535 - lastTime + time ) / 1000000.0;
 		}
-    double roll;
+//    double roll;
     double roll_sqrt = sqrt(
         DataStruct->Accel_X_RAW * DataStruct->Accel_X_RAW + DataStruct->Accel_Z_RAW * DataStruct->Accel_Z_RAW);
     if (roll_sqrt != 0.0)
@@ -211,7 +212,9 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     {
         roll = 0.0;
     }
-    double pitch = atan2(-DataStruct->Accel_X_RAW, DataStruct->Accel_Z_RAW) * RAD_TO_DEG;
+		
+//    double pitch = atan2(-DataStruct->Accel_X_RAW, DataStruct->Accel_Z_RAW) * RAD_TO_DEG;
+		pitch = atan2(-DataStruct->Accel_X_RAW, DataStruct->Accel_Z_RAW) * RAD_TO_DEG;
     if ((pitch < -90 && DataStruct->KalmanAngleY > 90) || (pitch > 90 && DataStruct->KalmanAngleY < -90))
     {
         KalmanY.angle = pitch;

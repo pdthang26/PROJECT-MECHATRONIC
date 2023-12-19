@@ -85,7 +85,7 @@ int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 400; // pulse per revolution
+const float pulsesPerRevolution = 400*4; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
@@ -103,7 +103,7 @@ int count=-1;
 //float prev_error = 0.0;
 //float integral = 0.0;
 
-float Kp = 0.5 ,Kd = 0.08;
+float Kp = 0.1 ,Kd = 0.01;
 float Ts = 0.01; // 10ms
 
 float input, output, lastError;
@@ -116,6 +116,7 @@ uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
 uint32_t valueIn = 0;
 uint8_t vel = 0;
+
 float setpoint ;
 int offsetCount;
 
@@ -220,15 +221,14 @@ int main(void)
 		switch (mode)
 		{
 			case OFFSET:
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 40000);
-				HAL_Delay(3000);
-				
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 50000);
+//			
+				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)==1){}
 				count=-1;
 				__HAL_TIM_SET_COUNTER(&htim2, 0);
 				HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
 				HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
-				
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 				HAL_Delay(2000);
 				mode = IDLE;
 				break;
@@ -239,7 +239,7 @@ int main(void)
 				CLCD_I2C_WriteString(&LCD1,lcdEncoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,1);
 				CLCD_I2C_WriteString(&LCD1,lcdRPM);
-				if(encoderValue>8996)
+				if(encoderValue>18000)
 				{
 					HAL_Delay(3000);
 					mode = AUTO;
@@ -256,6 +256,7 @@ int main(void)
 					changeMode=mode;
 				}
 				setpoint = valueIn;
+//				setpoint = test;
 				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
 				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
@@ -557,7 +558,7 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -685,6 +686,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PB0 PB1 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -719,7 +726,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			if ( mode == IDLE)
 			{
 				vel=100;
-				dc_motor_control(10000, encoderValue);
+				dc_motor_control(20000, encoderValue);
 			}
 			else if (mode == AUTO && changeMode==mode)
 			{

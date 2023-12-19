@@ -90,5 +90,17 @@ float map(float inValue, float inMax, float inMin,float outMax, float outMin )
 	}
 }
 
-
+void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index)
+{
+	for (uint8_t i=Index;i<9; i++)
+	{
+		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
+			{
+				if(i==Index)
+					*SaveNum =(DataIn[i]-48);
+				else if (i>Index) 
+					*SaveNum = *SaveNum * 10 + (DataIn[i]-48);
+			}	
+	}	
+}
 

@@ -181,7 +181,7 @@ def connect_uart():
                 canvas.place(x=1,y=1)
 
                 image = Image.open(successful)
-                image = image.resize((50, 50), Image.ANTIALIAS)
+                image = image.resize((50, 50), Image.BILINEAR)
                 photo = ImageTk.PhotoImage(image)
 
                 canvas.create_image(40,60,image=photo)

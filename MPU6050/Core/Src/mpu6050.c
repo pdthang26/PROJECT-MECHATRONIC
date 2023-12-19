@@ -61,7 +61,7 @@ const double Gyro_Z_corrector = 32.8;
 uint16_t time = 0;
 uint16_t lastTime = 0;
 double dt;
-double yaw;
+double yaw,yaw1;
 
 Kalman_t KalmanX = {
     .Q_angle = 0.001f,
@@ -247,7 +247,7 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     }
     if (fabs(DataStruct->KalmanAngleY) > 90) DataStruct->Gx = -DataStruct->Gx;
     DataStruct->KalmanAngleX = Kalman_getAngle(&KalmanX, roll, DataStruct->Gx, dt);
-		
+		yaw1 +=(((double)DataStruct->Gz))*dt*2;
 		yaw +=(((double)DataStruct->Gz) - DataStruct->gyroZoffset)*dt*2;
 		
 		if (yaw > 360 || yaw < -360 )
