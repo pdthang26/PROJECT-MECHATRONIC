@@ -3034,7 +3034,7 @@ Image Symbol Table
     posInMeter                               0x20000090   Data           4  main.o(.bss..L_MergedGlobals)
     adcValue                                 0x20000094   Data           4  main.o(.bss..L_MergedGlobals)
     direction                                0x20000098   Data           4  main.o(.bss..L_MergedGlobals)
-    revolutions                              0x2000009c   Data           4  main.o(.bss..L_MergedGlobals)
+    resolutions                              0x2000009c   Data           4  main.o(.bss..L_MergedGlobals)
     pre_mps                                  0x200000a0   Data           4  main.o(.bss..L_MergedGlobals)
     TxMailbox                                0x200000a4   Data           4  main.o(.bss..L_MergedGlobals)
     RxDataThro                               0x200000a8   Data           8  main.o(.bss..L_MergedGlobals)

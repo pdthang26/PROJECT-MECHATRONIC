@@ -116,6 +116,7 @@ uint16_t pwmValueCW = 0;
 uint16_t pwmValueCCW = 0;
 uint32_t valueIn = 0;
 uint8_t vel = 0;
+
 float setpoint ;
 int offsetCount;
 
@@ -220,15 +221,14 @@ int main(void)
 		switch (mode)
 		{
 			case OFFSET:
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 40000);
-				HAL_Delay(3000);
-				
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 50000);
+//			
+				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)==1){}
 				count=-1;
 				__HAL_TIM_SET_COUNTER(&htim2, 0);
 				HAL_TIM_Base_Start_IT(&htim1);// khoi dong ngat thoi gian lay mau
 				HAL_TIM_Encoder_Start(&htim2,TIM_CHANNEL_ALL);// khoi dong bo doc encoder tai timer2
-				
+				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
 				HAL_Delay(2000);
 				mode = IDLE;
 				break;
@@ -256,6 +256,7 @@ int main(void)
 					changeMode=mode;
 				}
 				setpoint = valueIn;
+//				setpoint = test;
 				sprintf(lcdRPM,"ctrl:%.0d :%d  ",valueIn,vel );
 				sprintf(lcdEncoderValue,"encoder:%d   ",encoderValue);
 				CLCD_I2C_SetCursor(&LCD1, 0,0);
@@ -683,6 +684,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB0 PB1 */

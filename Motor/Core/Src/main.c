@@ -91,13 +91,13 @@ int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
 const float sampleTime = 0.01; // in seconds
-const float pulsesPerRevolution = 312; // pulse per revolution
+const float pulsesPerRevolution = 312; // pulse per round
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
 int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
 int count=-1;
-float revolutions;
+float resolutions;
 
 // Variable PID
 //float Kp = 1.5;
@@ -615,13 +615,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			encoderValue = encoderGet + (count*65535);
 			if (direction == 1)  // increment count if car is moving forward
 				{
-					revolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+					resolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of resolutions
 				}
 			else if(direction == -1)
 				{
-					revolutions = -(encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of revolutions
+					resolutions = -(encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of resolutions
 				}
-			rpm = revolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
+			rpm = resolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
 			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
 			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
