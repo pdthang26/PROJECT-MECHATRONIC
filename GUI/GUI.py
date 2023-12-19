@@ -401,19 +401,19 @@ speed_unit.place(x=400,y=485)
 
 # Tạo nhãn cho Longitude
 longitude_label= tk.Label(root,text='Longitude',bg = GUI_color)
-longitude_label.place(x=10,y=530)
+longitude_label.place(x=10,y=520)
 
 # Tạo ô hiển thị Longitude
 longitude_display = tk.Label(root,relief=tk.SUNKEN,padx=5,bg='white',anchor=tk.W)
-longitude_display.place(x=10,y=555,height=30,width=170)
+longitude_display.place(x=10,y=545,height=30,width=170)
 
 # Tạo nhãn hiển thị Latitude
 latitude_label = tk.Label(root,text='Latitude',bg=GUI_color)
-latitude_label.place(x=10,y=600)
+latitude_label.place(x=10,y=580)
 
 # Tạo ô hiển thị Latitude
 latitude_display = tk.Label(root,relief=tk.SUNKEN,bg='white',anchor=tk.W,padx=5)
-latitude_display.place(x=10,y=625,height=30,width=170)
+latitude_display.place(x=10,y=605,height=30,width=170)
 
 # Lấy danh sách tất cả các cổng COM 
 com_ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -476,7 +476,6 @@ disconnect_button = tk.Button(root,text='Disconnect',state ='disabled',bg='white
 disconnect_button.place(x=420,y=140,height=30,width=100)
 
 ''' chức năng auto'''
-
 # Hàm cho nút Auto
 def auto_click():
 
@@ -800,7 +799,7 @@ def type_calculate_total_length(arr):
         length = np.linalg.norm(direction_A)
         total_length += length
         length_list.append(total_length)
-
+      
     return total_length, length_list
 '''-----ooo-----'''
 def sketch_calculate_total_length(arr):
@@ -838,7 +837,6 @@ def type_calculate_total_angle(arr):
         angle_array.append(angle_first_deg) 
     else:
         angle_array.append(-angle_first_deg) 
-
 
     for i in range(len(arr) - 2):
 
@@ -892,7 +890,6 @@ def T_sketch_calculate_total_angle(arr):
     else:
         angle_array.append(-angle_first_deg) 
 
-
     for i in range(len(arr) - 2):
 
         # Chuyển đổi các vector thành dạng numpy array
@@ -945,7 +942,6 @@ def L_sketch_calculate_total_angle(arr):
     else:
         angle_array.append(-angle_first_deg) 
 
-
     for i in range(len(arr) - 2):
 
         # Chuyển đổi các vector thành dạng numpy array
@@ -991,27 +987,23 @@ def map(inValue,  inMax,  inMin, outMax,  outMin ):
 
 		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin
 
-# Hàm PID cho bánh trước
-last_d_term_f = 0
-def PID_control_front_wheel(angle_desire, angle_actual,sample_time):
-    global last_d_term_f 
-    P_gain =  2
-    D_gain = 0.1
-    alpha = 0.1
+# Hàm điều khiển góc bánh trước dùng thuật Stanley Control
+def stanley_control(desired_angle,current_angle,desired_length,actual_length,velocity,k_coef):
+    psi = desired_angle-current_angle
+    err = desired_length - actual_length
+    e = abs(sqrt(err**2 + (2.1**2)-(2*err*2.1*cos(current_angle))))
+    if velocity ==0:
+        delta  = psi + atan(0)
+    else:
+        delta  = psi + atan((k_coef*e)/velocity)
 
-    error = angle_desire - angle_actual
-    d_term = error/sample_time
-    d_term_f = alpha*d_term + (1-alpha)*last_d_term_f
-    last_d_term_f = d_term_f
-    output = int(P_gain*error + D_gain*d_term_f)
-
-    if output == 0:
+    if delta == 0:
         return 20000
-    elif output > 0:
-        pulse = int(map(output, 100, 0, 39900, 20000))
+    elif delta > 0:
+        pulse = int(map(delta, 38, 0, 39900, 20000))
         return pulse
-    elif output < 0:
-        pulse = int(map(output, 0, -100, 20000, 100))
+    elif delta < 0:
+        pulse = int(map(delta, 0, -38, 20000, 100))
         return pulse
 
 # cờ chạy
@@ -1022,12 +1014,13 @@ actual_dis_p = 0 # lưu giá trị thực tế sau khi kết thúc
 back_speed = 0 # giá trị tốc độ của bánh sau
 displaced_angle = 0 # giá trị góc mong muốn
 desired_angle = 0 # góc mong muốn của xe
+target_point = 0 # khoảng cách điểm mong muốn
 def car_auto_control():
     global achieved_length,actual_dis_p,init
     global run,back_speed,counter,state
     global displaced_angle,desired_angle
     global points,arr_point,direction
-    global actual_dis,actual_angle
+    global target_point
 
     if state ==0:
         required_length, length_list = type_calculate_total_length(points)
@@ -1039,28 +1032,26 @@ def car_auto_control():
         elif direction == b'L':
             change_angle_list,desired_angle_list = L_sketch_calculate_total_angle(arr_point)
 
-    # actual_dis =  float(distance[1:].replace('\x00', ''))
-    # actual_angle = float(angle[1:].replace('\x00', ''))
-
     total_length = achieved_length + required_length
 
     if run:
         if abs(actual_dis)<total_length:
             step = 0
             for i in range(len(length_list)):
-                if actual_dis< (actual_dis_p + length_list[i])-2.5:
+                if actual_dis< (actual_dis_p + length_list[i]):
                     step = i
                     break
             desired_angle = desired_angle_list[step]
             displaced_angle = change_angle_list[step]
+            target_point = actual_dis_p + length_list[step]
             
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
                 back_speed = 50 # chạy tốc 50 với 2m đầu
             elif (actual_dis>actual_dis_p+2) and (actual_dis<=total_length-1):
                 if (actual_angle-desired_angle>=-1) and (actual_angle-desired_angle<=1):
-                    back_speed = 40 # xe đi thẳng chạy tốc 40
+                    back_speed = 40 # nếu  xe đi thẳng chạy tốc 40
                 else:
-                    back_speed = 35 # xe rẽ chạy tốc 35
+                    back_speed = 35 #  nếu xe rẽ chạy tốc 35
             else: 
                 back_speed = 0
 
@@ -1072,7 +1063,7 @@ def car_auto_control():
             run = False
 
         # UART cho bánh trước
-        front_pulse =str(int(PID_control_front_wheel(desired_angle,actual_angle,0.15)))
+        front_pulse =str(int(stanley_control(desired_angle,actual_angle,target_point,actual_dis,actual_vel,0.1)))
         front_speed = chr(75)
         f_uart_data = f_start_bit + front_speed.encode('utf-8') + front_pulse.encode('utf-8') + stop_bit
         f_uart.write(f_uart_data)
@@ -1081,6 +1072,8 @@ def car_auto_control():
         b_speed_str = str(back_speed)
         b_uart_data = b_start_bit + direction + b_speed_str.encode('utf-8') + stop_bit
         b_uart.write(b_uart_data)
+
+        print(length_list)
 
     root.after(50, car_auto_control)
 '''------ooo------'''
@@ -1364,7 +1357,7 @@ ax1.set_title('Car Trajectory')
 ax1.set_xlabel('X')
 ax1.set_ylabel('Y')
 ax1.set_xlim(-10,10)
-ax1.set_ylim(-25,50)
+ax1.set_ylim(-30,60)
 ax1.grid(True)      
 line1, = ax1.plot([], [], 'g')
 
@@ -1408,11 +1401,6 @@ def update_plot():
     elif state==1:
         required_length, length_list = sketch_calculate_total_length(arr_point)
 
-    # # đọc giá trị thực tế của quãng đường đi được
-    # actual_dis =  float(distance[1:].replace('\x00', ''))
-    # # đọc giá trị thực tế của góc xe
-    # actual_angle = float(angle[1:].replace('\x00', ''))
-
     if graph_run:
         
         # Biến x, y 
@@ -1435,27 +1423,22 @@ def update_plot():
         ax1.set_xlabel('X')
         ax1.set_ylabel('Y')
         ax1.set_xlim(-10,10)
-        ax1.set_ylim(-25,50)
+        ax1.set_ylim(-30,60)
         ax1.grid(True)
             
         # Cập nhật đồ thị
         canvas.draw()
 
-        print('actual_dis',actual_dis)
-        print('x_0',x_0)
-        print('y_0',y_0)
-        print('a_p',a_p)
-
     # Gọi lại hàm update_plot mỗi 50ms
     root.after(50, update_plot)
-
+    
 # Hàm nút Start
 def start_click():
     global graph_run
     graph_run = True
     # phân luồng để vẽ đồ thị
     threading.Thread(target = update_plot).start()
-    
+       
 # Nút start vẽ đồ thị 
 start_btn = tk.Button(root, text = 'Start',bg='white',command = start_click,state='disabled')
 start_btn.place(x=460,y = 500,height=30,width=80)
