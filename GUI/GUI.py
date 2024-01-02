@@ -219,7 +219,7 @@ def show_vel():
         velocity = vel_uart.readline().decode().strip()
         # Xử lý tín hiệu UART cho tốc độ
         if velocity.startswith('V'):
-            vel_display['text'] = velocity[1:].replace('\x00','')
+            vel_display['text'] = velocity[1:].replace('\x00','') 
             actual_vel = float(velocity[1:].replace('\x00',''))
             break
 
@@ -1038,11 +1038,11 @@ def car_auto_control():
         if abs(actual_dis)<total_length:
             step = 0
             for i in range(len(length_list)):
-                if actual_dis< (actual_dis_p + length_list[i]):
+                if actual_dis< (actual_dis_p + length_list[i])-2.1:
                     step = i
                     break
             desired_angle = desired_angle_list[step]
-            displaced_angle = change_angle_list[step]
+            displaced_angle = change_angle_list[step] 
             target_point = actual_dis_p + length_list[step]
             
             if (actual_dis>= actual_dis_p) and (actual_dis<= actual_dis_p+2):
@@ -1270,8 +1270,13 @@ front_frame.place(x=205,y=40)
 ''' Code cho tạo thanh trượt rẽ trái phải'''
 #truyền UART bánh trước
 def turn_slide(value):
-    
-    turn_adc = str(40000-(int(value)*40000/200))
+    valuess = int(value)
+    if valuess <= 100:
+        turn_adc = str(map(valuess,0, 100, 39900, 20000))
+    elif valuess>100:
+        turn_adc = str(map(valuess, 200, 100, 100, 20000))
+    print(values)
+    print(turn_adc)
     turn_speed = chr(70)
     uart_data = f_start_bit + turn_speed.encode('utf-8') + turn_adc.encode('utf-8') + stop_bit    
     if f_uart.is_open:
