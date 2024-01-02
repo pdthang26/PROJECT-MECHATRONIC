@@ -245,7 +245,7 @@ while (1)
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
 			sprintf(row1,"DAC:%.1f %d    ",adcValue, DAC_value);
-			sprintf(row2,"POS:%.4f   ",posInMeter);
+			sprintf(row2,"POS:%.4f %.1f ",posInMeter,mps);
 			
 			if((btnState>>1&0x01) == 0)
 			{
@@ -613,17 +613,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				}
 			}
 			encoderValue = encoderGet + (count*65535);
-			if (direction == 1)  // increment count if car is moving forward
-				{
-					resolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of resolutions
-				}
-			else if(direction == -1)
-				{
-					resolutions = -(encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of resolutions
-				}
-			rpm = resolutions / sampleTime  * 60 ;// calculating the value of velocity in RPM
-			mps = (rpm * diameter * PI) / 60.0;// calculating the value of velocity in m/s
-			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
+			resolutions = (encoderValue - last_encoderValue) / pulsesPerRevolution;// calculating the number of resolutions
+			rpm = resolutions / sampleTime  * 60  ;// calculating the value of velocity in RPM
+			mps = (resolutions * diameter * PI)/ sampleTime;// calculating the value of velocity in m/s
+//			posInRad = encoderValue * 0.017453293f ; //calculating the value of position in rad
 			posInMeter = (encoderValue / pulsesPerRevolution) * diameter * PI;
 			last_encoderValue = encoderValue;	
 			

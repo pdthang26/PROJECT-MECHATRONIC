@@ -135,6 +135,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
   * @retval int
   */
 int main(void)
+
 {
   /* USER CODE BEGIN 1 */
 
@@ -216,8 +217,8 @@ int main(void)
 					HAL_Delay(2000);
 					changeMode=mode_1;
 				}
-//				sprintf(lcdAcelX,"X:%.2f Z:%.2f ",Data.KalmanAngleX,Data.KalmanAngleY);
-//				sprintf(lcdAcelY,"Y:%d  :%c    ",RxDataBreak[7],RxDataBreak[6]);
+//				sprintf(lcdAcelX,"X:%.2f  ",Data.Ax);
+//				sprintf(lcdAcelY,"Y:%.2f  ",Data.Ay);
 //				CLCD_I2C_SetCursor(&LCD1, 0,0);
 //				CLCD_I2C_WriteString(&LCD1,lcdAcelX);
 //				CLCD_I2C_SetCursor(&LCD1, 0,1);
@@ -226,9 +227,9 @@ int main(void)
 				{
 					if(RxDataBreak[6]=='G')
 					{
-						if( Data.KalmanAngleX <= -5.0)
+						if( Data.KalmanAngleX >= 5.0)
 						{
-							uint16_t pwm_decelaration  =  10000*0.05*(-Data.KalmanAngleX / 5.0);
+							uint16_t pwm_decelaration  =  10000*0.05*(Data.KalmanAngleX / 5.0);
 							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1,pwm_decelaration);
 						}
 						else
@@ -256,7 +257,7 @@ int main(void)
 								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwmValueCW);
 								__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwmValueCCW);
 							}
-							
+								
 							pwmValueCW = 0;
 							pwmValueCCW = 0;
 							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
@@ -272,7 +273,7 @@ int main(void)
 					}
 					else if (RxDataBreak[6] == 'S')
 					{
-						if(Data.KalmanAngleX<3.0 && Data.KalmanAngleX > -3.0)
+						if(Data.KalmanAngleX<6.0 && Data.KalmanAngleX > -6.0)
 						{
 							while (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4) == 1)// cong tac hanh trinh
 							{
