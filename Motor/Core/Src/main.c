@@ -245,7 +245,7 @@ while (1)
 			adcValue = (float)(HAL_ADC_GetValue(&hadc1)/4095.0);
 			DAC_value = adcValue*4095;
 			sprintf(row1,"DAC:%.1f %d    ",adcValue, DAC_value);
-			sprintf(row2,"POS:%.4f %.1f ",posInMeter,mps);
+			sprintf(row2,"POS:%.1f %.1f ",posInMeter,mps);
 			
 			if((btnState>>1&0x01) == 0)
 			{
