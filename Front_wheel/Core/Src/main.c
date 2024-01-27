@@ -80,7 +80,6 @@ uint32_t              TxMailbox;
 
 
 // Encoder varible
-uint32_t encoderValuePrevious;
 int32_t encoderValue = 0;
 uint16_t encoderGet = 0;
 int32_t last_encoderValue = 0;
@@ -88,6 +87,7 @@ const float sampleTime = 0.01; // in seconds
 const float pulsesPerRevolution = 400*4; // pulse per revolution
 float rpm = 0; // velocity in RPM
 float mps = 0; // velocity in m/s
+float angular_vel = 0; // angular velocity in rad/s
 int direction; // FORWARD is 1 and REVERSE is -1
 float posInRad =0, posInMeter = 0;
 int count=-1;
@@ -723,6 +723,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				else count--; // decrement count if car is moving backward
 			}
 			encoderValue = encoderGet + (count*65535);
+			angular_vel = (encoderValue-last_encoderValue)*PI/8;
+			
+			TxData[3] = 'A';
+			convertFloatTo8Byte(angular_vel, TxData, 4, 7 );
+			WriteCAN(MASTER_ID,TxData);
+			
+			last_encoderValue = encoderValue;
 			if ( mode == IDLE)
 			{
 				vel=100;

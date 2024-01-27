@@ -23,34 +23,54 @@ void convertUint32_tTo8byte(uint32_t value, uint8_t *arr, uint8_t startByte, uin
 	}
 }
 
-void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte)
+void convertUint16_tTo8byte(uint16_t value, uint8_t *arr, uint8_t startByte, uint8_t stopByte)
 {
-	uint8_t j = 3;
-	uint32_t num;
-	memcpy(&num,&value,sizeof(value));
+	uint8_t j = 1;
 	
 	for (int i = startByte; i <= stopByte; i++) 
 	{
-		arr[i] = (num >> (8 * j)) & 0xFF;
+		arr[i] = (value >> (8 * j)) & 0xFF;
 		j--;
 	}
 }
 
-
-
-float convert8ByteToFloat (uint8_t *arr, uint8_t startByte, uint8_t stopByte)
+uint16_t convert8byteToUint16_t(uint8_t *arr, uint8_t startByte, uint8_t stopByte)
 {
-	uint8_t j = 3;
-	float num;
-	uint32_t value;
-	
+	uint16_t result = 0;
+	uint8_t j = 1;
 	for (int i = startByte; i <= stopByte; i++) 
 	{
-		value |= ((uint32_t)arr[i] << (8 * j));
+		result |= ((uint16_t)arr[i] << (8 * j));
 		j--;
-  }
-	memcpy(&num,&value,4);
-	return num;
+	}
+	return result;
+}
+
+
+void convertFloatTo8Byte(float value, uint8_t *arr, uint8_t startByte, uint8_t stopByte) {
+    uint8_t j = stopByte - startByte;
+    uint32_t num;
+    memcpy(&num, &value, sizeof(value));
+    
+    for (int i = startByte; i <= stopByte; i++) {
+        arr[i] = (num >> (8 * j)) & 0xFF;
+        j--;
+    }
+}
+
+float convert8ByteToFloat(uint8_t *arr, uint8_t startByte, uint8_t stopByte) {
+    uint8_t j = stopByte - startByte;
+    uint32_t value = 0;
+    
+    for (int i = startByte; i <= stopByte; i++) {
+        value |= ((uint32_t)arr[i] << (8 * j));
+        j--;
+    }
+
+    float num;
+    memcpy(&num, &value, sizeof(num));
+
+    return num;
 }
 
 
@@ -69,3 +89,18 @@ float map(float inValue, float inMax, float inMin,float outMax, float outMin )
 		return (inValue-inMin)*(outMax-outMin)/(inMax-inMin) + outMin;
 	}
 }
+
+void CharToNum (uint16_t *SaveNum, uint8_t *DataIn, uint8_t Index)
+{
+	for (uint8_t i=Index;i<9; i++)
+	{
+		if(DataIn[i]>= 48 && DataIn[i]<= 57) //có phai ky tu so hay khong?
+			{
+				if(i==Index)
+					*SaveNum =(DataIn[i]-48);
+				else if (i>Index) 
+					*SaveNum = *SaveNum * 10 + (DataIn[i]-48);
+			}	
+	}	
+}
+

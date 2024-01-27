@@ -66,6 +66,7 @@ uint8_t dataBuff[9];
 char data_y[20];
 char data_v[20];
 char data_d[20];
+char data_a[20];
 char data_us[21];
 
 typedef struct 
@@ -87,6 +88,7 @@ typedef struct
 dataCAN dataCANvel = {.type = 'V'};
 dataCAN dataCANpos = {.type = 'P'};
 dataCAN dataCANyaw = {.type = 'Y'};
+dataCAN dataCANangularVel = {.type = 'A'};
 
 typedef struct  
 {
@@ -466,7 +468,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 				ultraSonicRight.center = convert8byteToUint16_t(RxData,4,5);
 				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_3);
 			}
-			
+			else if(RxData[3]== dataCANangularVel.type)
+			{
+				dataCANangularVel.value = convert8ByteToFloat(RxData,4,7);
+				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+			}
 		}
 	}
 }
@@ -484,8 +490,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		sprintf(data_v,"\nV%.1f",dataCANvel.value);
 		HAL_UART_Transmit(&huart3,(uint8_t*)data_v,sizeof(data_v),HAL_MAX_DELAY);
 		
+		sprintf(data_a,"\nA%.1f",dataCANangularVel.value);
+		HAL_UART_Transmit(&huart3,(uint8_t*)data_a,sizeof(data_a),HAL_MAX_DELAY);
+		
 		sprintf(data_us,"\nU%d,%d,%d,%d",ultraSonicLeft.outside,ultraSonicLeft.center,ultraSonicRight.center,ultraSonicRight.outside);
 		HAL_UART_Transmit(&huart3,(uint8_t*)data_us,sizeof(data_us),HAL_MAX_DELAY);
+		
+		
 	}
 }
 
